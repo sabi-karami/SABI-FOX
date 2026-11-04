@@ -29,7 +29,7 @@ jobs:
           Move-Item source/FoxyVPN-cc2e169207d8866e92be20216dfed8069068d4de windows-preview
           Copy-Item windows-overrides/* windows-preview -Recurse -Force
       - run: flutter --version
-      - run: flutter pub get --enforce-lockfile
+      - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
       - run: flutter build windows --release
