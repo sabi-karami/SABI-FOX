@@ -46,7 +46,7 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze lib
       - name: Run available upstream tests
-        run: flutter test test/settings_mode_test.dart test/update_checker_test.dart
+        run: flutter test test/settings_mode_test.dart test/update_checker_test.dart test/h2_connection_window_test.dart
       - run: flutter build windows --release
       - name: Package proxy-only unsigned preview with notices
         shell: pwsh
