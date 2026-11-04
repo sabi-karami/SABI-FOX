@@ -64,7 +64,7 @@ class HomeViewModel(
         runCatching {
                 NetworkInterface.getNetworkInterfaces().toList()
                     .filter { it.isUp && !it.isLoopback && !it.isVirtual }
-                    .filterNot { it.name.contains("SABI-FOX", true) || it.displayName.orEmpty().contains("SABI-FOX", true) || it.displayName.orEmpty().contains("Wintun", true) }
+                    .filterNot { it.name.contains("SABI-FOX", true) || it.displayName.orEmpty().contains("SABI-FOX", true) || it.displayName.orEmpty().contains("Wintun", true) || it.name.contains("sing-tun", true) || it.displayName.orEmpty().contains("sing-tun", true) }
                     .flatMap { nic -> nic.inetAddresses.toList().map { "${nic.name}/${it.hostAddress}" } }
                     .toSet()
             }

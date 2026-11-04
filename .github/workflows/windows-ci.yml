@@ -79,6 +79,30 @@ jobs:
           if echo '{"outbounds":[{"type":"no-such-type"}]}' | "$core" check; then
             echo "check accepted an invalid config" >&2; exit 1
           fi
+          # run protocol: start request, proxy traffic through a mixed inbound, then stop.
+          cfg='{"log":{"level":"warn"},"inbounds":[{"type":"mixed","tag":"mixed-in","listen":"127.0.0.1","listen_port":18080}],"outbounds":[{"type":"direct","tag":"direct-out"}]}'
+          {
+            printf '{"token":"ci-token","config":%s}\n' "$cfg"
+            sleep 3
+            curl -sS -o /dev/null -w 'proxy check: HTTP %{http_code}\n' -x http://127.0.0.1:18080 http://www.msftconnecttest.com/connecttest.txt >&2 || echo "proxy check failed" >&2
+            echo '{"cmd":"stop"}'
+          } | timeout 60 "$core" run > core-run.out 2> core-run.log
+          cat core-run.out
+          grep -q '"event":"started"' core-run.out || { cat core-run.log; exit 1; }
+      - name: Smoke-test TUN adapter (informational)
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          core=windows/native/windows/sabifox-core.exe
+          cfg='{"log":{"level":"info"},"inbounds":[{"type":"tun","tag":"tun-in","interface_name":"SABI-FOX","address":["172.19.0.1/30"],"auto_route":false,"stack":"system"}],"outbounds":[{"type":"direct","tag":"direct-out"}]}'
+          {
+            printf '{"token":"ci-token","config":%s}\n' "$cfg"
+            sleep 5
+            powershell -NoProfile -Command "Get-NetAdapter | Format-Table -AutoSize Name, InterfaceDescription, Status" >&2 || true
+            echo '{"cmd":"stop"}'
+          } | timeout 60 "$core" run > tun-run.out 2> tun-run.log || true
+          cat tun-run.out; tail -n 30 tun-run.log
+          grep -q '"event":"started"' tun-run.out
 
       # ---- sign-in window (WebView2) ----------------------------------------------------
       - name: Build sign-in window
@@ -153,6 +177,56 @@ jobs:
             dist/SHA256SUMS-windows.txt
             dist/SHA256SUMS-windows.txt.sig
           if-no-files-found: error
+
+      - name: Launch smoke test
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+          $exe = (Resolve-Path "windows/build/compose/binaries/main/app/SABI-FOX/SABI-FOX.exe").Path
+          $data = Join-Path $env:LOCALAPPDATA 'SABI-FOX'
+          $crash = Join-Path $data 'files\last_crash.txt'
+          New-Item -ItemType Directory -Force screenshots | Out-Null
+          $problems = @()
+          $runs = @(
+            @{ Name = 'en'; Options = '-Duser.language=en -Duser.country=US' },
+            @{ Name = 'fa'; Options = '-Duser.language=fa -Duser.country=IR' },
+            @{ Name = 'switch-en-to-fa'; Options = '-Duser.language=en -Duser.country=US -Dsabifox.selftest.languageSwitch=true' }
+          )
+          foreach ($run in $runs) {
+            Get-Process SABI-FOX -ErrorAction SilentlyContinue | Stop-Process -Force
+            Start-Sleep -Seconds 2
+            Remove-Item -Recurse -Force $data -ErrorAction SilentlyContinue
+            $env:JAVA_TOOL_OPTIONS = $run.Options
+            $p = Start-Process -FilePath $exe -PassThru
+            Start-Sleep -Seconds 25
+            try {
+              $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+              $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+              $g = [System.Drawing.Graphics]::FromImage($bmp)
+              $g.CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
+              $bmp.Save("screenshots/$($run.Name).png", [System.Drawing.Imaging.ImageFormat]::Png)
+              $g.Dispose(); $bmp.Dispose()
+            } catch { Write-Warning "screenshot failed: $_" }
+            if ($p.HasExited) { $problems += "$($run.Name): SABI-FOX exited early (code $($p.ExitCode))" }
+            if (Test-Path $crash) {
+              $problems += "$($run.Name): crash report written"
+              Get-Content $crash | Write-Host
+            }
+            Get-ChildItem -Recurse $data -Filter *.log -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "--- $($_.FullName)"; Get-Content $_.FullName -Tail 40 | Write-Host }
+          }
+          Get-Process SABI-FOX -ErrorAction SilentlyContinue | Stop-Process -Force
+          Remove-Item Env:JAVA_TOOL_OPTIONS
+          if ($problems.Count -gt 0) { throw ($problems -join "; ") }
+          Write-Host "SABI-FOX launched cleanly in English, Persian and across a live language switch."
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-screenshots
+          path: screenshots
+          if-no-files-found: ignore
 
       - name: Upload diagnostics
         if: failure()

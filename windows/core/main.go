@@ -187,7 +187,7 @@ func main() {
 	case "run":
 		run()
 	case "version":
-		fmt.Println("sabifox-core (sing-box", C.Version, ")")
+		fmt.Printf("sabifox-core (sing-box %s)\n", C.Version)
 	default:
 		fmt.Fprintln(os.Stderr, "unknown command", os.Args[1])
 		os.Exit(2)

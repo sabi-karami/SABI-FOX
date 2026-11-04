@@ -30,6 +30,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.sabifox.vpn.data.AppLogger
 import com.sabifox.vpn.data.ControlPlaneHttp
+import com.sabifox.vpn.data.FirefoxAccountHeaders
 import com.sabifox.vpn.data.FxaAuthRepository
 import com.sabifox.vpn.platform.CookieManager
 import com.sabifox.vpn.platform.windows.SignInHelper
@@ -51,10 +52,6 @@ private const val CMD_CAN_LINK_ACCOUNT = "fxaccounts:can_link_account"
 private const val CMD_LOGIN = "fxaccounts:login"
 
 private val SESSION_TOKEN_HEX = Regex("^[0-9a-f]{64}$")
-
-/** Firefox for Windows, so the Mozilla account pages offer the desktop sign-in flow. */
-private const val FIREFOX_DESKTOP_UA =
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:135.0) Gecko/20100101 Firefox/135.0"
 
 private fun jsString(value: String): String = JSONObject.quote(value)
 
@@ -388,7 +385,8 @@ fun BrowserLoginScreen(
             )
         helper.start(
             url = startUrl,
-            userAgent = FIREFOX_DESKTOP_UA,
+            // Current Firefox for Windows, so the account pages offer the desktop sign-in flow.
+            userAgent = FirefoxAccountHeaders.userAgent,
             script = SABI_CHANNEL_SHIM + "\n" + WEBCHANNEL_HOOK_JS,
             title = windowTitle,
             cookies = CookieManager.getInstance().entries(),

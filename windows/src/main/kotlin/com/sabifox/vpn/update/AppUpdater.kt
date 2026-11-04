@@ -244,7 +244,11 @@ internal class AppUpdater(private val context: Context) {
                 "/LANG=" + (if (java.util.Locale.getDefault().language == "fa") "persian" else "english"),
             )
             .directory(file.parentFile)
+            .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+            .redirectError(ProcessBuilder.Redirect.DISCARD)
             .start()
+            .outputStream
+            .close()
     }
 
     /** Unpacks the new portable build and swaps it in after SABI-FOX exits, keeping `data`. */
@@ -265,18 +269,30 @@ internal class AppUpdater(private val context: Context) {
         }
         val root = staging.listFiles()?.singleOrNull { File(it, "SABI-FOX.exe").isFile } ?: staging
         check(File(root, "SABI-FOX.exe").isFile) { "The update archive does not contain SABI-FOX.exe" }
-        val pid = ProcessHandle.current().pid()
+        // jpackage runs the JVM in a child of the SABI-FOX.exe that was started; wait for both.
+        val self = ProcessHandle.current()
+        val pids =
+            listOf(self.pid()) +
+                self.parent()
+                    .filter { it.info().command().orElse("").endsWith("SABI-FOX.exe", ignoreCase = true) }
+                    .map { listOf(it.pid()) }
+                    .orElse(emptyList())
+        val lines =
+            listOf("@echo off", "chcp 65001 >nul", ":wait", "ping -n 2 127.0.0.1 >nul") +
+                pids.map { pid -> "tasklist /FI \"PID eq $pid\" 2>nul | find \"$pid\" >nul && goto wait" } +
+                listOf(
+                    "robocopy \"${root.absolutePath}\" \"${installDir.absolutePath}\" /E /R:5 /W:1 /XD data /NFL /NDL /NJH /NJS >nul",
+                    "start \"\" \"${File(installDir, "SABI-FOX.exe").absolutePath}\"",
+                )
         val script = File(directory, "apply-update.cmd")
-        script.writeText(
-            """
-            @echo off
-            :wait
-            tasklist /FI "PID eq $pid" 2>nul | find "$pid" >nul && (timeout /t 1 /nobreak >nul & goto wait)
-            robocopy "${root.absolutePath}" "${installDir.absolutePath}" /E /R:5 /W:1 /XD data /NFL /NDL /NJH /NJS >nul
-            start "" "${File(installDir, "SABI-FOX.exe").absolutePath}"
-            """.trimIndent().replace("\n", "\r\n")
-        )
-        ProcessBuilder("cmd.exe", "/c", script.absolutePath).directory(directory).start()
+        script.writeText(lines.joinToString("\r\n", postfix = "\r\n"))
+        ProcessBuilder("cmd.exe", "/c", script.absolutePath)
+            .directory(directory)
+            .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+            .redirectError(ProcessBuilder.Redirect.DISCARD)
+            .start()
+            .outputStream
+            .close()
     }
 
     private suspend fun discoverRelease(): AppRelease? {

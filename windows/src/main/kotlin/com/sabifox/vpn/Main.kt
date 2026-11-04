@@ -35,6 +35,7 @@ import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberTrayState
 import androidx.compose.ui.window.rememberWindowState
 import androidx.navigation.compose.rememberNavController
+import com.sabifox.vpn.data.AppLanguage
 import com.sabifox.vpn.data.AppLogger
 import com.sabifox.vpn.data.model.ConnectionState
 import com.sabifox.vpn.platform.LocalContext
@@ -87,7 +88,8 @@ fun main(args: Array<String>) {
         val scope = rememberCoroutineScope()
         val state by SabiFoxService.state.collectAsState()
         val language = app.desktopSettings.language
-        val windowState = rememberWindowState(size = DpSize(420.dp, 840.dp), position = WindowPosition(Alignment.Center))
+        val windowHeight = remember { initialWindowHeight() }
+        val windowState = rememberWindowState(size = DpSize(420.dp, windowHeight.dp), position = WindowPosition(Alignment.Center))
 
         fun quit() {
             if (quitting) return
@@ -148,8 +150,17 @@ fun main(args: Array<String>) {
             updater.startPeriodicChecks()
         }
 
+        // CI only: flips the language at runtime to prove the live switch keeps working.
+        if (System.getProperty("sabifox.selftest.languageSwitch") != null) {
+            LaunchedEffect(Unit) {
+                delay(8_000L)
+                app.desktopSettings.updateLanguage(if (language.isRtl()) AppLanguage.ENGLISH else AppLanguage.PERSIAN)
+            }
+        }
+
         val connected = state == ConnectionState.CONNECTED
         val trayState = rememberTrayState()
+        key(language) {
         Tray(
             icon = painterResource(Res.drawable.app_icon),
             state = trayState,
@@ -178,6 +189,7 @@ fun main(args: Array<String>) {
                 Item(stringResource(Res.string.desktop_tray_quit), onClick = { quit() })
             },
         )
+        }
 
         Window(
             onCloseRequest = { if (app.desktopSettings.closeToTray) windowVisible = false else quit() },
@@ -186,18 +198,20 @@ fun main(args: Array<String>) {
             title = "SABI-FOX" + if (connected) " • " + stringResource(Res.string.desktop_tray_connected) else "",
             icon = painterResource(Res.drawable.app_icon),
         ) {
-            window.minimumSize = java.awt.Dimension(380, 640)
+            window.minimumSize = java.awt.Dimension(380, minOf(640, windowHeight))
+            // The navigation state and its ViewModelStore outlive a language switch: NavHost
+            // rejects a new store once its graph is set, so only the UI below is rebuilt.
             val navController = rememberNavController()
-            key(language) {
-                val viewModelOwner = remember {
-                    object : androidx.lifecycle.ViewModelStoreOwner {
-                        override val viewModelStore = androidx.lifecycle.ViewModelStore()
-                    }
+            val viewModelOwner = remember {
+                object : androidx.lifecycle.ViewModelStoreOwner {
+                    override val viewModelStore = androidx.lifecycle.ViewModelStore()
                 }
-                CompositionLocalProvider(
-                    LocalContext provides app,
-                    androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner provides viewModelOwner,
-                ) {
+            }
+            CompositionLocalProvider(
+                LocalContext provides app,
+                androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner provides viewModelOwner,
+            ) {
+                key(language) {
                     val themeController = rememberThemeController(app.settingsStore)
                     SabiFoxTheme(themeMode = themeController.mode, rtl = language.isRtl()) {
                         val snackbar = remember { SnackbarHostState() }
@@ -246,6 +260,14 @@ fun main(args: Array<String>) {
             }
         }
     }
+}
+
+/** 840 dp tall, but never taller than the work area (many laptops are only 768 px high). */
+private fun initialWindowHeight(): Int {
+    val available =
+        runCatching { java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment().maximumWindowBounds.height }
+            .getOrDefault(900)
+    return minOf(840, available - 40).coerceAtLeast(480)
 }
 
 /** Esc goes back one screen, like the Android back gesture. */
