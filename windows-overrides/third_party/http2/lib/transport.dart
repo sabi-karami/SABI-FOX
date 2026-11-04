@@ -42,6 +42,7 @@ class ClientSettings extends Settings {
   const ClientSettings(
       {super.concurrentStreamLimit,
       super.streamWindowSize,
+      super.connectionWindowSize,
       this.allowServerPushes = false});
 }
 
