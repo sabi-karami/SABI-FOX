@@ -52,7 +52,7 @@ val generateBuildConfig by tasks.registering {
     }
 }
 
-sourceSets.main {
+kotlin.sourceSets.named("main") {
     kotlin.srcDir(generateBuildConfig)
 }
 
