@@ -13,6 +13,17 @@ class TokenStore(context: Context) {
     private val legacyPrefs by lazy { SecurePreferences(appContext, "sabifox_tokens", ::storageFailure) }
     private val vault by lazy { SecurePreferences(appContext, "sabifox_accounts_v1", ::storageFailure) }
 
+    // A shared limit used by storage and UI; valid indexes are 0 through 9.
+    companion object {
+        const val MAX_ACCOUNTS = AccountSlotPolicy.MAX_ACCOUNTS
+        private val sessionLock = Any()
+        @Volatile private var epoch = 0L
+        private const val KEY_ACCESS_TOKEN = "access_token"
+        private const val KEY_REFRESH_TOKEN = "refresh_token"
+        private const val KEY_EXPIRES_AT = "expires_at"
+        private const val CLOCK_SKEW_TOLERANCE_SECONDS = 60L
+    }
+
     data class AccountSlot(
         val slot: Int,
         val email: String?,
@@ -45,7 +56,7 @@ class TokenStore(context: Context) {
 
     private fun activeSlotLocked(): Int {
         ensureVault()
-        return vault.getLong("active_slot", 0L).toInt().also { check(it in 0..1) }
+        return vault.getLong("active_slot", 0L).toInt().also { check(AccountSlotPolicy.validSlot(it)) }
     }
 
     val activeSlot: Int
@@ -53,7 +64,7 @@ class TokenStore(context: Context) {
 
     fun listAccounts(): List<AccountSlot> = synchronized(sessionLock) {
         ensureVault()
-        (0..1).map { slot ->
+        (0 until MAX_ACCOUNTS).map { slot ->
             AccountSlot(
                 slot = slot,
                 email = vault.getString(key(slot, "email"), null),
@@ -66,7 +77,7 @@ class TokenStore(context: Context) {
     }
 
     fun selectAccount(slot: Int) {
-        require(slot in 0..1)
+        require(AccountSlotPolicy.validSlot(slot))
         val listener = synchronized(sessionLock) {
             if (activeSlotLocked() == slot) return
             vault.edit().putLong("active_slot", slot.toLong()).commit()
@@ -79,8 +90,8 @@ class TokenStore(context: Context) {
     fun setVerifiedEmailIfCurrent(expectedEpoch: Long, email: String) = synchronized(sessionLock) {
         check(epoch == expectedEpoch && hasStoredSession()) { "Session changed" }
         val slot = activeSlotLocked()
-        val otherEmail = vault.getString(key(1 - slot, "email"), null)
-        check(!email.equals(otherEmail, ignoreCase = true)) { "Account already in the other slot" }
+        val existing = (0 until MAX_ACCOUNTS).map { vault.getString(key(it, "email"), null) }
+        check(!AccountSlotPolicy.isDuplicate(slot, email, existing)) { "Account already in another slot" }
         vault.edit().putString(key(slot, "email"), email).commit()
     }
 
@@ -201,9 +212,9 @@ class TokenStore(context: Context) {
         synchronized(sessionLock) {
             check(epoch == expectedEpoch) { "Sign-in was superseded" }
             val slot = activeSlotLocked()
-            val otherEmail = vault.getString(key(1 - slot, "email"), null)
-            check(!verifiedEmail.equals(otherEmail, ignoreCase = true)) {
-                "This Firefox account is already in the other slot."
+            val existing = (0 until MAX_ACCOUNTS).map { vault.getString(key(it, "email"), null) }
+            check(!AccountSlotPolicy.isDuplicate(slot, verifiedEmail, existing)) {
+                "This Firefox account is already in another slot."
             }
             vault.edit()
                 .putString(key(slot, KEY_ACCESS_TOKEN), auth.accessToken)
@@ -218,13 +229,4 @@ class TokenStore(context: Context) {
         }
     }
 
-    companion object {
-        private val sessionLock = Any()
-        @Volatile private var epoch = 0L
-        private const val KEY_ACCESS_TOKEN = "access_token"
-        private const val KEY_REFRESH_TOKEN = "refresh_token"
-        private const val KEY_EXPIRES_AT = "expires_at"
-
-        private const val CLOCK_SKEW_TOLERANCE_SECONDS = 60L
-    }
 }

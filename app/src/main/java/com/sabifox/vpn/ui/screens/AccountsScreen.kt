@@ -56,7 +56,7 @@ fun AccountsScreen(
             Modifier.fillMaxSize().padding(inset).verticalScroll(rememberScrollState()).padding(16.dp)
         ) {
             Text(
-                "Two slots on this device only. Each account requires its own Mozilla sign-in and verification. " +
+                "Up to ten accounts on this device. Each requires its own Mozilla sign-in and verification. " +
                     "Disconnect before switching, then reconnect manually. No password or email code is stored in the app.",
                 style = MaterialTheme.typography.bodyMedium,
             )
@@ -73,10 +73,9 @@ fun AccountsScreen(
             accounts.forEach { account ->
                 Card(modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {
                     Column(Modifier.padding(16.dp)) {
-                        val suggested = if (account.slot == 0) "info2@sahebkarami.ir" else "info3@sahebkarami.ir"
                         Text("Slot ${account.slot + 1}" + if (account.slot == activeSlot) " • ACTIVE" else "", style = MaterialTheme.typography.titleMedium)
                         Text(
-                            account.email ?: if (account.signedIn) "Identity not yet checked" else "Suggested: $suggested",
+                            account.email ?: if (account.signedIn) "Identity not yet checked" else "Add a Mozilla account",
                             modifier = Modifier.padding(top = 4.dp),
                         )
                         val quota = account.remainingBytes?.let { formatBytes(it) } ?: "Unknown"

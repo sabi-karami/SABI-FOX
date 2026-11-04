@@ -23,8 +23,8 @@ android {
         applicationId = "com.sabifox.vpn"
         minSdk = 26
         targetSdk = 35
-        versionCode = 2
-        versionName = "1.1.0"
+        versionCode = 3
+        versionName = "1.2.0"
     }
 
     splits {
@@ -123,5 +123,6 @@ dependencies {
 
     implementation("com.google.errorprone:error_prone_annotations:2.27.0")
 
+    testImplementation("junit:junit:4.13.2")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

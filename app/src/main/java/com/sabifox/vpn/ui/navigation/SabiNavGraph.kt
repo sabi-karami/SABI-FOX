@@ -68,7 +68,6 @@ fun SabiNavGraph(
         composable(SabiRoutes.LOGIN) {
             LoginScreen(
                 authRepository = container.authRepository,
-                suggestedEmail = if (container.tokenStore.activeSlot == 0) "info2@sahebkarami.ir" else "info3@sahebkarami.ir",
                 onChooseAccount = { navController.navigate(SabiRoutes.ACCOUNTS) },
                 onSignedIn = {
                     navController.navigate(SabiRoutes.HOME) {

@@ -248,7 +248,7 @@ fun SettingsScreen(
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())) {
             ListItem(
-                headlineContent = { Text("Accounts (two-account prototype)") },
+                headlineContent = { Text("Accounts (up to ten)") },
                 supportingContent = { Text("Sign in and switch on this device") },
                 trailingContent = {
                     Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
