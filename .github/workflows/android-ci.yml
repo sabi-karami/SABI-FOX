@@ -33,3 +33,26 @@ jobs:
       - run: flutter analyze
       - run: flutter test
       - run: flutter build windows --release
+      - name: Package proxy-only unsigned preview with notices
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $release = 'build/windows/x64/runner/Release'
+          if (!(Test-Path "$release/SABI-FOX.exe")) { throw 'Application executable not found' }
+          foreach ($f in @('hev-socks5-tunnel.exe','msys-2.0.dll','wintun.dll')) {
+            if (Test-Path "$release/$f") { throw "Unexpected tunnel engine: $f" }
+          }
+          Copy-Item LICENSE "$release/UPSTREAM-LICENSE.txt"
+          Copy-Item SABIFOX-WINDOWS-DEVELOPMENT.md "$release/READ-ME-FIRST.txt"
+          Copy-Item third_party/http2/LICENSE "$release/HTTP2-LICENSE.txt"
+          Copy-Item assets/fonts/OFL.txt "$release/FONTS-LICENSE.txt"
+          Copy-Item assets/flags/LICENSE "$release/FLAGS-LICENSE.txt"
+          Compress-Archive -Path "$release/*" -DestinationPath "$env:RUNNER_TEMP/SABI-FOX-Windows-PROXY-PREVIEW.zip"
+          (Get-FileHash "$env:RUNNER_TEMP/SABI-FOX-Windows-PROXY-PREVIEW.zip" -Algorithm SHA256).Hash.ToLower() | Out-File "$env:RUNNER_TEMP/SHA256.txt" -Encoding ascii
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-proxy-only-unsigned-preview
+          path: |
+            ${{ runner.temp }}/SABI-FOX-Windows-PROXY-PREVIEW.zip
+            ${{ runner.temp }}/SHA256.txt
+          if-no-files-found: error
