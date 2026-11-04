@@ -95,7 +95,7 @@ namespace SabiFox.SignIn
                         catch { continue; }
                         if (command == null) continue;
                         var copy = command;
-                        Post(() => Handle(copy));
+                        Post(() => HandleCommand(copy));
                     }
                 }
             }
@@ -120,7 +120,7 @@ namespace SabiFox.SignIn
             return map.TryGetValue(key, out value) && value != null ? Convert.ToString(value) : "";
         }
 
-        private async void Handle(Dictionary<string, object> command)
+        private async void HandleCommand(Dictionary<string, object> command)
         {
             switch (Str(command, "cmd"))
             {

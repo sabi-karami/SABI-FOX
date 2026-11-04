@@ -117,9 +117,6 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          try {
-            Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/jrsoftware/issrc/main/Files/Languages/Unofficial/Persian.isl" -OutFile windows/packaging/Persian.isl
-          } catch { Write-Warning "Persian installer language unavailable: $_" }
           $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
           if (!(Test-Path $iscc)) { choco install innosetup -y --no-progress; }
           & $iscc /Qp "/DAppVersion=$env:APP_VERSION" "/DSourceDir=$PWD\windows\build\compose\binaries\main\app\SABI-FOX" "/DOutputDir=$PWD\dist" windows\packaging\sabifox.iss
