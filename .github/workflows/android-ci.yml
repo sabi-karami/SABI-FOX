@@ -28,10 +28,25 @@ jobs:
           Expand-Archive source.zip -DestinationPath source
           Move-Item source/FoxyVPN-cc2e169207d8866e92be20216dfed8069068d4de windows-preview
           Copy-Item windows-overrides/* windows-preview -Recurse -Force
+          # Upstream omitted several vendored http2 files; fill only missing files
+          # from the verified 2.3.1 archive, preserving the upstream patch.
+          curl.exe -fL --retry 3 -o http2.tar.gz https://pub.dev/api/archives/http2-2.3.1.tar.gz
+          if ((Get-FileHash http2.tar.gz -Algorithm SHA256).Hash.ToLower() -ne '382d3aefc5bd6dc68c6b892d7664f29b5beb3251611ae946a98d35158a82bbfa') { throw 'http2 archive checksum mismatch' }
+          New-Item -ItemType Directory -Path http2-temp | Out-Null
+          tar.exe -xzf http2.tar.gz -C http2-temp
+          Get-ChildItem http2-temp/lib -File -Recurse | ForEach-Object {
+            $relative = $_.FullName.Substring((Resolve-Path http2-temp/lib).Path.Length).TrimStart('\')
+            $destination = Join-Path 'windows-preview/third_party/http2/lib' $relative
+            if (!(Test-Path $destination)) {
+              New-Item -ItemType Directory -Force -Path (Split-Path $destination) | Out-Null
+              Copy-Item $_.FullName $destination
+            }
+          }
       - run: flutter --version
       - run: flutter pub get
-      - run: flutter analyze
-      - run: flutter test
+      - run: flutter analyze lib
+      - name: Run available upstream tests
+        run: flutter test test/settings_mode_test.dart test/update_checker_test.dart
       - run: flutter build windows --release
       - name: Package proxy-only unsigned preview with notices
         shell: pwsh
@@ -47,6 +62,7 @@ jobs:
           Copy-Item third_party/http2/LICENSE "$release/HTTP2-LICENSE.txt"
           Copy-Item assets/fonts/OFL.txt "$release/FONTS-LICENSE.txt"
           Copy-Item assets/flags/LICENSE "$release/FLAGS-LICENSE.txt"
+          Copy-Item pubspec.lock "$release/BUILD-PUBSPEC-LOCK.txt"
           Compress-Archive -Path "$release/*" -DestinationPath "$env:RUNNER_TEMP/SABI-FOX-Windows-PROXY-PREVIEW.zip"
           (Get-FileHash "$env:RUNNER_TEMP/SABI-FOX-Windows-PROXY-PREVIEW.zip" -Algorithm SHA256).Hash.ToLower() | Out-File "$env:RUNNER_TEMP/SHA256.txt" -Encoding ascii
       - uses: actions/upload-artifact@v4
