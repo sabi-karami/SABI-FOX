@@ -1,219 +1,85 @@
 import 'package:flutter/material.dart';
 
+import '../core/open_in_browser.dart';
+import '../data/browser_auth.dart';
 import '../data/fxa_auth_repository.dart';
 import '../data/token_store.dart';
-import '../l10n/generated/app_localizations.dart';
 
-/// Firefox Accounts sign-in: email + password, then an email-2FA code step
-/// when the account requires it.
+/// Sign-in happens on Mozilla's official site in the system browser.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({required this.onSignedIn, super.key});
-
   final VoidCallback onSignedIn;
-
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _codeController = TextEditingController();
-
-  /// startLogin() keeps the pending session token on the instance, so the 2FA
-  /// step has to run on the same object — a fresh repository would always
-  /// throw "No pending FxA session".
   final _auth = FxaAuthRepository(TokenStore.instance);
-
-  bool _twoFactorStep = false;
-  bool _busy = false;
-  bool _obscurePassword = true;
+  final _urlController = TextEditingController();
+  BrowserAuthAttempt? _attempt;
   String? _error;
+  bool _busy = false;
 
   @override
   void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    _codeController.dispose();
+    _urlController.dispose();
     super.dispose();
   }
 
-  Future<void> _signIn() async {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
-    setState(() {
-      _busy = true;
-      _error = null;
-    });
-    try {
-      final needsTwoFactor = await _auth.startLogin(
-        _emailController.text.trim(),
-        _passwordController.text,
-      );
-      if (!mounted) return;
-      if (needsTwoFactor) {
-        setState(() {
-          _twoFactorStep = true;
-          _busy = false;
-        });
-      } else {
-        widget.onSignedIn();
-      }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _busy = false;
-        _error = e is FxaApiError ? e.message : e.toString();
-      });
-    }
+  Future<void> _start() async {
+    final attempt = BrowserAuthAttempt.create();
+    setState(() { _attempt = attempt; _error = null; _urlController.clear(); _busy = true; });
+    final opened = await openInBrowser(attempt.authorizeUrl.toString());
+    if (!mounted) return;
+    setState(() { _busy = false; if (!opened) _error = 'Could not open the browser. Check your default browser.'; });
   }
 
-  Future<void> _submitCode() async {
-    final code = _codeController.text.trim();
-    if (code.isEmpty) return;
-    setState(() {
-      _busy = true;
-      _error = null;
-    });
+  Future<void> _finish() async {
+    final attempt = _attempt;
+    if (attempt == null || _busy) return;
+    setState(() { _busy = true; _error = null; });
     try {
-      await _auth.submitTwoFactorCode(code);
+      await _auth.completeBrowserAuthorization(attempt, _urlController.text);
+      _urlController.clear();
       if (!mounted) return;
       widget.onSignedIn();
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _busy = false;
-        _error = e is FxaApiError ? e.message : e.toString();
-      });
+    } on FormatException catch (e) {
+      if (mounted) setState(() { _busy = false; _error = e.message; });
+    } catch (_) {
+      _urlController.clear();
+      if (mounted) setState(() { _attempt = null; _busy = false; _error = 'Authorization could not be completed. Please start again.'; });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context);
-    return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Icon(Icons.vpn_lock_rounded, size: 64, color: scheme.primary),
-                  const SizedBox(height: 12),
-                  Text(
-                    'SABI-FOX',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context)
-                        .textTheme
-                        .headlineSmall
-                        ?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _twoFactorStep
-                        ? l10n.loginTwoFactorSubtitle
-                        : l10n.loginSubtitle,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
-                  ),
-                  const SizedBox(height: 28),
-                  if (!_twoFactorStep) ...[
-                    TextFormField(
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      autofillHints: const [AutofillHints.email],
-                      decoration: InputDecoration(
-                        labelText: l10n.loginEmailLabel,
-                        prefixIcon: const Icon(Icons.alternate_email),
-                        border: const OutlineInputBorder(),
-                      ),
-                      validator: (v) => (v == null || !v.contains('@'))
-                          ? l10n.loginEmailInvalid
-                          : null,
-                    ),
-                    const SizedBox(height: 14),
-                    TextFormField(
-                      controller: _passwordController,
-                      obscureText: _obscurePassword,
-                      autofillHints: const [AutofillHints.password],
-                      onFieldSubmitted: (_) => _busy ? null : _signIn(),
-                      decoration: InputDecoration(
-                        labelText: l10n.loginPasswordLabel,
-                        prefixIcon: const Icon(Icons.lock_outline),
-                        border: const OutlineInputBorder(),
-                        suffixIcon: IconButton(
-                          icon: Icon(_obscurePassword
-                              ? Icons.visibility
-                              : Icons.visibility_off),
-                          onPressed: () => setState(
-                              () => _obscurePassword = !_obscurePassword),
-                        ),
-                      ),
-                      validator: (v) => (v == null || v.isEmpty)
-                          ? l10n.loginPasswordRequired
-                          : null,
-                    ),
-                  ] else ...[
-                    TextFormField(
-                      controller: _codeController,
-                      keyboardType: TextInputType.number,
-                      autofocus: true,
-                      onFieldSubmitted: (_) => _busy ? null : _submitCode(),
-                      decoration: InputDecoration(
-                        labelText: l10n.loginCodeLabel,
-                        prefixIcon: const Icon(Icons.pin_outlined),
-                        border: const OutlineInputBorder(),
-                      ),
-                    ),
-                  ],
-                  if (_error != null) ...[
-                    const SizedBox(height: 14),
-                    Text(
-                      _error!,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: scheme.error, fontSize: 13),
-                    ),
-                  ],
-                  const SizedBox(height: 22),
-                  FilledButton(
-                    onPressed: _busy
-                        ? null
-                        : (_twoFactorStep ? _submitCode : _signIn),
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size.fromHeight(48),
-                    ),
-                    child: _busy
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(strokeWidth: 2.5),
-                          )
-                        : Text(_twoFactorStep ? l10n.loginVerify : l10n.loginSignIn),
-                  ),
-                  if (_twoFactorStep) ...[
-                    const SizedBox(height: 10),
-                    TextButton(
-                      onPressed: _busy
-                          ? null
-                          : () => setState(() {
-                                _twoFactorStep = false;
-                                _error = null;
-                              }),
-                      child: Text(l10n.loginBackToSignIn),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
+    final colors = Theme.of(context).colorScheme;
+    return Scaffold(body: SafeArea(child: Center(child: SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Icon(Icons.public_rounded, size: 64, color: colors.primary),
+        const SizedBox(height: 16),
+        Text('SABI-FOX', textAlign: TextAlign.center, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 12),
+        const Text('Browser sign-in preview', textAlign: TextAlign.center),
+        const SizedBox(height: 12),
+        const Text('Sign in on Mozilla’s official website. Do not enter your Mozilla password or email code into this app.', textAlign: TextAlign.center),
+        const SizedBox(height: 20),
+        FilledButton(onPressed: _busy ? null : _start, child: Text(_attempt == null ? 'Open Mozilla sign-in' : 'Start again')),
+        if (_attempt != null) ...[
+          const SizedBox(height: 18),
+          const Text('After signing in, copy the complete final address from your browser and paste it below. Keep this address private; never share it in chat.'),
+          const SizedBox(height: 12),
+          TextField(controller: _urlController, obscureText: true, maxLines: 1, autocorrect: false, enableSuggestions: false,
+            decoration: const InputDecoration(labelText: 'Final Mozilla address', border: OutlineInputBorder())),
+          const SizedBox(height: 14),
+          FilledButton.tonal(onPressed: _busy ? null : _finish, child: const Text('Finish sign-in')),
+        ],
+        if (_busy) const Padding(padding: EdgeInsets.all(12), child: Center(child: CircularProgressIndicator())),
+        if (_error != null) Padding(padding: const EdgeInsets.only(top: 14), child: Text(_error!, style: TextStyle(color: colors.error))),
+        const SizedBox(height: 18),
+        Text('Experimental • local proxy only • not a complete VPN', textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodySmall),
+      ]),
+    ))));
   }
 }

@@ -1,10 +1,12 @@
 # SABI-FOX Windows -- PROXY-ONLY DEVELOPMENT PREVIEW
 
 This is an experimental unsigned build, not an official production release.
-The UI and sign-in are unverified. This preview uses its own native Mozilla
-account form (not an official Mozilla-hosted page). Do not enter an important
-account or rely on it for privacy or security. To test sign-in, use a disposable
-account you control. No 10-account switching or cross-device transfer exists.
+The browser sign-in is experimental and has not been tested with a real account.
+Sign in only on the official Mozilla page. Paste the resulting complete redirect
+address only into the app, never into chat or another site. The address contains
+a sensitive short-lived authorization code; do not share or screenshot it.
+Do not rely on this preview for privacy or security. No account switching or
+cross-device transfer exists.
 
 ONLY the local SOCKS5/HTTP proxy mode is available. The program does not route
 all Windows traffic, install a tunnel or configure the system proxy. IPv6 and
