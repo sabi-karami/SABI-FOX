@@ -1,6 +1,10 @@
 package com.sabifox.vpn.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -79,8 +83,19 @@ fun LoginScreen(
                     .padding(24.dp),
             verticalArrangement = Arrangement.Center,
         ) {
-            SabiMark(size = 96.dp)
+            Box(
+                modifier = Modifier.size(118.dp)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f), CircleShape)
+                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), CircleShape),
+                contentAlignment = Alignment.Center,
+            ) { SabiMark(size = 80.dp) }
             Spacer(Modifier.height(20.dp))
+            Text(
+                "SABI  /  FOX", color = MaterialTheme.colorScheme.primary,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Black, letterSpacing = 3.sp,
+            )
+            Spacer(Modifier.height(12.dp))
             Text(
                 stringResource(R.string.login_title),
                 style = MaterialTheme.typography.headlineMedium,

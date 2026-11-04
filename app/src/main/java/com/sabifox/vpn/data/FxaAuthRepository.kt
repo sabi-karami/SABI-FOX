@@ -231,7 +231,7 @@ class FxaAuthRepository(
                     throw cancellation
                 } catch (transport: Exception) {
                     throw FxaRefreshFailure(
-                        transport.message ?: "Could not reach the Firefox Accounts server",
+                        transport.message ?: "Could not reach the Mozilla account server",
                         permanent = false,
                         cause = transport,
                     )
@@ -292,7 +292,7 @@ class FxaAuthRepository(
         val tokenData = oauthToken(sessionToken)
         coroutineContext.ensureActive()
         val accessToken = tokenData.optString("access_token").takeIf { it.isNotBlank() }
-            ?: error("Firefox Accounts returned no access token")
+            ?: error("Mozilla account service returned no access token")
         val email = verifiedProfileEmail(accessToken)
         coroutineContext.ensureActive()
         tokenStore.completeLoginIfCurrent(

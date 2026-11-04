@@ -319,7 +319,7 @@ class FastlyChallengeSolver(private val cookieJar: SimpleCookieJar) {
             "clientmetrics" -> clientMetricsAnswer()
             "captcha" ->
                 throw FastlyChallengeError(
-                    "Firefox Accounts requires a CAPTCHA. Sign in again to continue."
+                    "Mozilla account sign-in requires a CAPTCHA. Sign in again to continue."
                 )
             else -> throw FastlyChallengeError("unsupported Fastly challenge type '$type'")
         }

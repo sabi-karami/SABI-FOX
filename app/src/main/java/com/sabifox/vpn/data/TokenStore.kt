@@ -214,7 +214,7 @@ class TokenStore(context: Context) {
             val slot = activeSlotLocked()
             val existing = (0 until MAX_ACCOUNTS).map { vault.getString(key(it, "email"), null) }
             check(!AccountSlotPolicy.isDuplicate(slot, verifiedEmail, existing)) {
-                "This Firefox account is already in another slot."
+                "This Mozilla account is already in another slot."
             }
             vault.edit()
                 .putString(key(slot, KEY_ACCESS_TOKEN), auth.accessToken)

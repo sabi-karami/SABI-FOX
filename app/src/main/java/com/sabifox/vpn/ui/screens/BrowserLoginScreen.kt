@@ -5,12 +5,13 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.webkit.CookieManager
-import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
+import androidx.webkit.WebViewCompat
+import androidx.webkit.WebViewFeature
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -62,14 +63,14 @@ private fun jsString(value: String): String = JSONObject.quote(value)
 
 private val WEBCHANNEL_HOOK_JS = """
 (function() {
-  if (window.__sabiChannelHooked) return;
+  if (window !== window.top || window.__sabiChannelHooked) return;
   window.__sabiChannelHooked = true;
   var forward = function (detail) {
     try {
       var host = window.location.hostname;
-      if (host !== 'accounts.firefox.com' && !host.endsWith('.firefox.com')) return;
+      if (host !== 'accounts.firefox.com' || window.location.protocol !== 'https:') return;
       var payload = typeof detail === 'string' ? detail : JSON.stringify(detail);
-      sabiWebChannel.onMessage(payload, window.location.href);
+      sabiWebChannel.postMessage(JSON.stringify({type: 'webchannel', payload: payload}));
     } catch (e) {}
   };
   window.addEventListener('WebChannelMessageToChrome', function (e) { forward(e.detail); });
@@ -114,7 +115,7 @@ private val WEBCHANNEL_HOOK_JS = """
       return origFetch.apply(this, arguments).then(function(res) {
         try {
           if (res && res.ok && checkVerifyUrl(reqUrl)) {
-            sabiWebChannel.onSessionVerified();
+            sabiWebChannel.postMessage(JSON.stringify({type: 'verified'}));
           }
         } catch (e) {}
         return res;
@@ -132,7 +133,7 @@ private val WEBCHANNEL_HOOK_JS = """
       this.addEventListener('load', function() {
         try {
           if (this.status >= 200 && this.status < 300 && checkVerifyUrl(this.__sabiReqUrl)) {
-            sabiWebChannel.onSessionVerified();
+            sabiWebChannel.postMessage(JSON.stringify({type: 'verified'}));
           }
         } catch (e) {}
       });
@@ -142,7 +143,7 @@ private val WEBCHANNEL_HOOK_JS = """
   var notifyNav = function() {
     try {
       if (checkSuccessUrl(window.location.href)) {
-        sabiWebChannel.onSessionVerified();
+        sabiWebChannel.postMessage(JSON.stringify({type: 'verified'}));
       }
     } catch (e) {}
   };
@@ -180,19 +181,12 @@ internal class WebChannelBridge(
     @Volatile
     private var exchangeInProgress = false
 
-    @JavascriptInterface
-    fun onMessage(payload: String) {
-        onMessage(payload, "https://accounts.firefox.com")
-    }
-
-    @JavascriptInterface
     fun onSessionVerified() {
         val token = pendingSessionToken ?: return
         exchangeInProgress = false
         notifySessionToken(token)
     }
 
-    @JavascriptInterface
     fun onOAuthResult(status: Int, responseText: String) {
         val token = pendingSessionToken
         if (status in 200..299) {
@@ -226,9 +220,8 @@ internal class WebChannelBridge(
         }
     }
 
-    @JavascriptInterface
-    fun onOAuthError(error: String) {
-        AppLogger.w(TAG, "in-browser oauth exchange failed: $error")
+    fun onOAuthError() {
+        AppLogger.w(TAG, "in-browser oauth exchange failed")
         val token = pendingSessionToken
         if (token != null) {
             fallbackSession(token)
@@ -245,12 +238,7 @@ internal class WebChannelBridge(
         }
     }
 
-    @JavascriptInterface
-    fun onMessage(payload: String, originUrl: String) {
-        val host = runCatching { Uri.parse(originUrl).host?.lowercase() }.getOrNull()
-        if (host != "accounts.firefox.com" && host?.endsWith(".firefox.com") != true) {
-            return
-        }
+    fun onMessage(payload: String) {
         val message = runCatching {
             JSONObject(payload).optJSONObject("message") ?: JSONObject()
         }.getOrNull() ?: return
@@ -334,18 +322,20 @@ internal class WebChannelBridge(
                 body: ${jsString(bodyJson)}
               }).then(function(res) {
                 return res.text().then(function(text) {
-                  sabiWebChannel.onOAuthResult(res.status, text);
+                  sabiWebChannel.postMessage(JSON.stringify({type: 'oauth_result', status: res.status, response: text}));
                 });
               }).catch(function(err) {
-                sabiWebChannel.onOAuthError(err ? (err.message || ('' + err)) : 'fetch_failed');
+                sabiWebChannel.postMessage(JSON.stringify({type: 'oauth_error'}));
               });
             })();
         """.trimIndent()
         view.post {
-            runCatching { view.evaluateJavascript(script, null) }
-                .onFailure {
-                    fallbackSession(token)
-                }
+            if (!isTrustedLoginUrl(view.url)) {
+                fallbackSession(token)
+            } else {
+                runCatching { view.evaluateJavascript(script, null) }
+                    .onFailure { fallbackSession(token) }
+            }
         }
     }
 
@@ -354,13 +344,22 @@ internal class WebChannelBridge(
         val script = "window.__sabiReply && window.__sabiReply(" +
             "${jsString(FXA_CHANNEL_ID)}, ${jsString(messageId)}, ${jsString(command)}, ${jsString(dataJson)});"
         view.post {
-            runCatching { view.evaluateJavascript(script, null) }
-                .onFailure { AppLogger.w(TAG, "could not answer webchannel command $command", it) }
+            if (isTrustedLoginUrl(view.url)) {
+                runCatching { view.evaluateJavascript(script, null) }
+                    .onFailure { AppLogger.w(TAG, "could not answer webchannel command", it) }
+            }
         }
     }
 }
 
+private fun isTrustedLoginUrl(url: String?): Boolean {
+    if (url.isNullOrBlank()) return false
+    val uri = runCatching { Uri.parse(url) }.getOrNull() ?: return false
+    return LoginMessagePolicy.trustedOrigin(uri.scheme, uri.host, uri.port, true, 0)
+}
+
 private fun isSuccessUrl(url: String?): Boolean {
+    if (!isTrustedLoginUrl(url)) return false
     if (url.isNullOrBlank()) return false
     val u = url.lowercase()
     return u.contains("confirmed") ||
@@ -391,6 +390,10 @@ fun BrowserLoginScreen(
     val currentOnTokens by rememberUpdatedState(onTokensCaptured)
     val currentOnSession by rememberUpdatedState(onSessionCaptured)
     val currentOnCanceled by rememberUpdatedState(onCanceled)
+    val secureBridgeAvailable = remember {
+        WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER) &&
+            WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)
+    }
 
     BackHandler(enabled = true) {
         if (webViewInstance?.canGoBack() == true) {
@@ -470,7 +473,13 @@ fun BrowserLoginScreen(
             )
         }
         Box(Modifier.weight(1f)) {
-            AndroidView(
+            if (!secureBridgeAvailable) {
+                Text(
+                    "Secure sign-in requires an up-to-date Android System WebView. Update it and try again.",
+                    modifier = Modifier.padding(24.dp),
+                    color = MaterialTheme.colorScheme.error,
+                )
+            } else AndroidView(
                 factory = { context ->
                     WebView(context).apply {
                         webViewInstance = this
@@ -484,16 +493,34 @@ fun BrowserLoginScreen(
                         cookieManager.setAcceptThirdPartyCookies(this, true)
                         val bridge = WebChannelBridge(this, authRepository, ::handleTokens, ::handleSession)
                         bridgeInstance = bridge
-                        addJavascriptInterface(bridge, "sabiWebChannel")
+                        val trustedOrigins = setOf("https://accounts.firefox.com")
+                        WebViewCompat.addWebMessageListener(
+                            this, "sabiWebChannel", trustedOrigins,
+                        ) { _, message, sourceOrigin, isMainFrame, _ ->
+                            val payload = message.data ?: return@addWebMessageListener
+                            if (!LoginMessagePolicy.trustedOrigin(
+                                    sourceOrigin.scheme, sourceOrigin.host, sourceOrigin.port,
+                                    isMainFrame, payload.length,
+                                )) return@addWebMessageListener
+                            val envelope = runCatching { JSONObject(payload) }.getOrNull()
+                                ?: return@addWebMessageListener
+                            when (envelope.optString("type")) {
+                                "webchannel" -> bridge.onMessage(envelope.optString("payload"))
+                                "verified" -> bridge.onSessionVerified()
+                                "oauth_result" -> bridge.onOAuthResult(
+                                    envelope.optInt("status"), envelope.optString("response"),
+                                )
+                                "oauth_error" -> bridge.onOAuthError()
+                            }
+                        }
+                        WebViewCompat.addDocumentStartJavaScript(this, WEBCHANNEL_HOOK_JS, trustedOrigins)
                         webViewClient = object : WebViewClient() {
                             override fun shouldOverrideUrlLoading(
                                 view: WebView,
                                 request: WebResourceRequest,
                             ): Boolean {
                                 val scheme = request.url.scheme?.lowercase().orEmpty()
-                                if (scheme != "http" && scheme != "https") {
-                                    return false
-                                }
+                                if (scheme != "https") return true
                                 val host = request.url.host?.lowercase().orEmpty()
                                 if (host == "accounts.firefox.com" ||
                                     host.endsWith(".firefox.com") ||
@@ -532,7 +559,6 @@ fun BrowserLoginScreen(
                                 if (isSuccessUrl(url)) {
                                     bridge.onSessionVerified()
                                 }
-                                runCatching { view.evaluateJavascript(WEBCHANNEL_HOOK_JS, null) }
                             }
 
                             override fun onPageFinished(view: WebView, url: String?) {
@@ -546,7 +572,6 @@ fun BrowserLoginScreen(
                                 if (isSuccessUrl(url)) {
                                     bridge.onSessionVerified()
                                 }
-                                runCatching { view.evaluateJavascript(WEBCHANNEL_HOOK_JS, null) }
                             }
                         }
                         webChromeClient = object : WebChromeClient() {
@@ -554,10 +579,6 @@ fun BrowserLoginScreen(
                                 pageProgress = newProgress
                             }
 
-                            override fun onConsoleMessage(message: android.webkit.ConsoleMessage?): Boolean {
-                                message?.message()?.let { AppLogger.d(TAG, "console: $it") }
-                                return super.onConsoleMessage(message)
-                            }
                         }
                         loadUrl(startUrl)
                     }

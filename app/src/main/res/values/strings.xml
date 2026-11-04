@@ -168,7 +168,7 @@
     <string name="update_current">No newer compatible update is available.</string>
     <string name="update_available_msg">Release %1$s is available. Download to verify its version, integrity and signing identity.</string>
     <string name="update_downloading_fmt">Downloading update: %1$d / %2$d MB</string>
-    <string name="update_ready_msg">Version %1$s is verified (checksum and signature match). Tap Install: SABI-FOX updates itself and reconnects automatically.</string>
+    <string name="update_ready_msg">Version %1$s is verified (checksum and signature match). Tap Install and follow Android prompts. Reconnect if needed.</string>
     <string name="update_btn_download">Download</string>
     <string name="update_btn_install">Install</string>
     <string name="update_btn_check">Check</string>
@@ -179,9 +179,9 @@
     <string name="proxy_tls_review_error">Review the proxy address before saving the configuration without TLS.</string>
     <string name="proxy_credentials_invalid_error">Enter credentials valid for the selected proxy type, or clear both fields.</string>
 
-    <string name="login_title">Sign in with Firefox</string>
-    <string name="login_desc">SABI-FOX runs on the free 50 GB of monthly VPN traffic Mozilla includes with a Firefox account. No subscription is required.</string>
-    <string name="login_btn_sign_in">Sign in with Firefox</string>
+    <string name="login_title">Sign in to SABI-FOX</string>
+    <string name="login_desc">Use your Mozilla account to access the service. Available quota and eligibility are determined by Mozilla.</string>
+    <string name="login_btn_sign_in">Continue with Mozilla account</string>
     <string name="login_help">Opens the official Mozilla sign-in page in an in-app browser and returns automatically once you are signed in.</string>
     <string name="browser_login_subtitle">You will return to SABI-FOX automatically after signing in</string>
 
@@ -190,7 +190,7 @@
     <string name="theme_desc_light">Theme: light. Tap for dark mode, long press to follow the system</string>
     <string name="theme_desc_dark">Theme: dark. Tap for light mode, long press to follow the system</string>
     <string name="settings_auto_install_updates">Install updates automatically</string>
-    <string name="settings_auto_install_help">Downloads, verifies and installs new versions in the background (about every 6 hours). The VPN reconnects by itself afterwards.</string>
+    <string name="settings_auto_install_help">Checks for verified updates about every 6 hours. Android may require installation confirmation; reconnect if needed.</string>
     <string name="settings_auto_install_permission">Permission needed: tap to allow SABI-FOX to install its own updates</string>
     <string name="update_notif_channel">App updates</string>
     <string name="update_notif_confirm_title">SABI-FOX %1$s is ready</string>

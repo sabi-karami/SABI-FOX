@@ -44,7 +44,7 @@ fun AccountsScreen(
     val connection by SabiFoxService.state.collectAsStateWithLifecycle()
     Scaffold(topBar = {
         TopAppBar(
-            title = { Text("Account switcher • prototype") },
+            title = { Text("SABI-FOX • Accounts (preview)") },
             navigationIcon = {
                 IconButton(onClick = onBack) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
