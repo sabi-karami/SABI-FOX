@@ -112,13 +112,16 @@ class FxaAuthRepository(
                         val ttl =
                             if (expiresInSeconds > 0) expiresInSeconds
                             else DEFAULT_ACCESS_TOKEN_TTL_SECONDS.toLong()
+                        val cleanAccessToken = accessToken.trim().also { require(it.isNotBlank()) }
+                        val email = verifiedProfileEmail(cleanAccessToken)
                         tokenStore.completeLoginIfCurrent(
                             RuntimeAuth(
-                                accessToken = accessToken.trim(),
+                                accessToken = cleanAccessToken,
                                 refreshToken = refreshToken?.trim()?.ifBlank { null },
                                 expiresAtEpochSeconds = System.currentTimeMillis() / 1000 + ttl,
                             ),
                             epoch,
+                            email,
                         )
                         Unit
                     }
@@ -288,16 +291,44 @@ class FxaAuthRepository(
     private suspend fun completeLogin(sessionToken: String, epoch: Long) {
         val tokenData = oauthToken(sessionToken)
         coroutineContext.ensureActive()
+        val accessToken = tokenData.optString("access_token").takeIf { it.isNotBlank() }
+            ?: error("Firefox Accounts returned no access token")
+        val email = verifiedProfileEmail(accessToken)
+        coroutineContext.ensureActive()
         tokenStore.completeLoginIfCurrent(
             RuntimeAuth(
-                accessToken =
-                    tokenData.optString("access_token").takeIf { it.isNotBlank() }
-                        ?: error("Firefox Accounts returned no access token"),
+                accessToken = accessToken,
                 refreshToken = tokenData.optString("refresh_token", "").ifBlank { null },
                 expiresAtEpochSeconds = expiryFrom(tokenData),
             ),
             epoch,
+            email,
         )
+    }
+
+    /** Identity comes from Mozilla's bearer-authenticated profile, never from a selected label. */
+    private suspend fun verifiedProfileEmail(accessToken: String): String {
+        val request = Request.Builder()
+            .url("https://profile.accounts.firefox.com/v1/profile")
+            .header("Authorization", "Bearer $accessToken")
+            .header("Accept", "application/json")
+            .build()
+        return client.newCall(request).awaitResponse().use { response ->
+            check(response.isSuccessful) { "Could not verify Mozilla account identity (HTTP ${response.code})." }
+            val body = response.body?.byteStream()?.use { it.readBoundedUtf8(131_072) }
+                ?: error("Empty Mozilla profile")
+            val profile = JSONObject(body)
+            profile.optString("email").trim().also {
+                check(it.isNotEmpty() && it.length <= 254 && '@' in it) { "Mozilla profile did not include an email." }
+            }
+        }
+    }
+
+    suspend fun identifyCurrentSession() {
+        val epoch = tokenStore.sessionEpoch
+        val accessToken = currentAccessToken() ?: error("Session needs sign-in")
+        val email = verifiedProfileEmail(accessToken)
+        tokenStore.setVerifiedEmailIfCurrent(epoch, email)
     }
 
     private suspend fun oauthToken(sessionToken: String): JSONObject {

@@ -48,6 +48,11 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Prototype installs beside production without replacing it or its data.
+            applicationIdSuffix = ".prototype"
+            versionNameSuffix = "-prototype"
+        }
         release {
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")

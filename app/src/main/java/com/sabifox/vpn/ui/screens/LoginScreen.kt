@@ -36,7 +36,13 @@ import com.sabifox.vpn.data.FxaAuthRepository
 import com.sabifox.vpn.ui.LoginViewModel
 
 @Composable
-fun LoginScreen(authRepository: FxaAuthRepository, onSignedIn: () -> Unit) {
+fun LoginScreen(
+    authRepository: FxaAuthRepository,
+    onSignedIn: () -> Unit,
+    onChooseAccount: (() -> Unit)? = null,
+    suggestedEmail: String? = null,
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val model: LoginViewModel =
         androidx.lifecycle.viewmodel.compose.viewModel(
             factory = remember(authRepository) { LoginViewModel.factory(authRepository) }
@@ -80,6 +86,17 @@ fun LoginScreen(authRepository: FxaAuthRepository, onSignedIn: () -> Unit) {
                 style = MaterialTheme.typography.headlineMedium,
             )
             Spacer(Modifier.height(8.dp))
+            if (suggestedEmail != null) {
+                Text(
+                    "Suggested account: $suggestedEmail. The actual account will be verified after login.",
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                androidx.compose.material3.TextButton(onClick = {
+                    val clipboard = context.getSystemService(android.content.ClipboardManager::class.java)
+                    clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("SABI-FOX email", suggestedEmail))
+                }) { Text("Copy suggested email") }
+                Spacer(Modifier.height(8.dp))
+            }
             Text(
                 stringResource(R.string.login_desc),
                 style = MaterialTheme.typography.bodyMedium,
@@ -105,6 +122,12 @@ fun LoginScreen(authRepository: FxaAuthRepository, onSignedIn: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 6.dp),
             )
+
+            if (onChooseAccount != null) {
+                androidx.compose.material3.TextButton(onClick = onChooseAccount) {
+                    Text("Choose another saved account")
+                }
+            }
 
             errorMessage?.let {
                 Spacer(Modifier.height(12.dp))

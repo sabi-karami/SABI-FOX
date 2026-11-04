@@ -14,6 +14,7 @@ import com.sabifox.vpn.data.FxaAuthRepository
 import com.sabifox.vpn.data.GUARDIAN_ENDPOINT_DEFAULT
 import com.sabifox.vpn.data.GuardianClient
 import com.sabifox.vpn.data.SettingsStore
+import com.sabifox.vpn.data.TokenStore
 import com.sabifox.vpn.vpn.ExitCheck
 import com.sabifox.vpn.vpn.SabiFoxService
 import kotlinx.coroutines.CancellationException
@@ -28,6 +29,7 @@ import kotlinx.coroutines.withContext
 
 class HomeViewModel(
     private val settingsStore: SettingsStore,
+    private val tokenStore: TokenStore,
     private val guardianClient: GuardianClient,
     private val authRepository: FxaAuthRepository,
     private val connectivity: ConnectivityManager?,
@@ -79,16 +81,16 @@ class HomeViewModel(
     fun refreshAccount() {
         viewModelScope.launch {
             try {
+                val epoch = tokenStore.sessionEpoch
                 val token = authRepository.currentAccessToken() ?: return@launch
                 val info = guardianClient.fetchUserInfo(GUARDIAN_ENDPOINT_DEFAULT, token)
                 val hasKnownQuota = info.quotaRemaining != null || info.maxBytes != null
                 val isUnlimited = !info.limitedBandwidth && !hasKnownQuota
                 withContext(Dispatchers.IO) {
-                    settingsStore.saveAccountQuota(
-                        isUnlimited,
-                        info.quotaRemaining,
-                        info.maxBytes,
-                    )
+                    tokenStore.withCurrentSession(epoch) {
+                        tokenStore.saveQuotaIfCurrent(epoch, info.quotaRemaining, info.maxBytes)
+                        settingsStore.saveAccountQuota(isUnlimited, info.quotaRemaining, info.maxBytes)
+                    }
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
@@ -137,6 +139,7 @@ class HomeViewModel(
     companion object {
         fun factory(
             settingsStore: SettingsStore,
+            tokenStore: TokenStore,
             guardianClient: GuardianClient,
             authRepository: FxaAuthRepository,
             connectivity: ConnectivityManager?,
@@ -144,6 +147,7 @@ class HomeViewModel(
             initializer {
                 HomeViewModel(
                     settingsStore,
+                    tokenStore,
                     guardianClient,
                     authRepository,
                     connectivity,

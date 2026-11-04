@@ -83,6 +83,7 @@ private enum class SettingsDialog {
 fun SettingsScreen(
     settingsStore: SettingsStore,
     onOpenLogs: () -> Unit,
+    onOpenAccounts: () -> Unit,
     onSignOut: () -> Unit,
     onBack: () -> Unit,
     signOutInProgress: Boolean = false,
@@ -246,6 +247,14 @@ fun SettingsScreen(
         }
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())) {
+            ListItem(
+                headlineContent = { Text("Accounts (two-account prototype)") },
+                supportingContent = { Text("Sign in and switch on this device") },
+                trailingContent = {
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
+                },
+                modifier = Modifier.clickable(onClick = onOpenAccounts),
+            )
             SectionLabel(stringResource(R.string.settings_section_connection))
             ListItem(
                 headlineContent = { Text(stringResource(R.string.settings_always_on_vpn)) },

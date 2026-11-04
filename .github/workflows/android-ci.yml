@@ -3,7 +3,7 @@ name: SABI-FOX Android CI
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, "prototype/two-accounts"]
     tags: ["v*.*.*"]
   pull_request:
     branches: [main]

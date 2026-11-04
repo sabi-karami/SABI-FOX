@@ -16,6 +16,7 @@ import androidx.navigation.compose.rememberNavController
 import com.sabifox.vpn.AppContainer
 import com.sabifox.vpn.ui.HomeViewModel
 import com.sabifox.vpn.ui.ServerListViewModel
+import com.sabifox.vpn.ui.screens.AccountsScreen
 import com.sabifox.vpn.ui.screens.HomeScreen
 import com.sabifox.vpn.ui.screens.LoginScreen
 import com.sabifox.vpn.ui.screens.LogsScreen
@@ -34,6 +35,7 @@ object SabiRoutes {
     const val SERVERS = "servers"
     const val SETTINGS = "settings"
     const val LOGS = "logs"
+    const val ACCOUNTS = "accounts"
 }
 
 @Composable
@@ -66,6 +68,8 @@ fun SabiNavGraph(
         composable(SabiRoutes.LOGIN) {
             LoginScreen(
                 authRepository = container.authRepository,
+                suggestedEmail = if (container.tokenStore.activeSlot == 0) "info2@sahebkarami.ir" else "info3@sahebkarami.ir",
+                onChooseAccount = { navController.navigate(SabiRoutes.ACCOUNTS) },
                 onSignedIn = {
                     navController.navigate(SabiRoutes.HOME) {
                         popUpTo(SabiRoutes.LOGIN) { inclusive = true }
@@ -79,6 +83,7 @@ fun SabiNavGraph(
                     factory =
                         HomeViewModel.factory(
                             settingsStore = container.settingsStore,
+                            tokenStore = container.tokenStore,
                             guardianClient = container.guardianClient,
                             authRepository = container.authRepository,
                             connectivity = context.getSystemService(ConnectivityManager::class.java),
@@ -118,6 +123,7 @@ fun SabiNavGraph(
             SettingsScreen(
                 settingsStore = container.settingsStore,
                 onOpenLogs = { navController.navigate(SabiRoutes.LOGS) },
+                onOpenAccounts = { navController.navigate(SabiRoutes.ACCOUNTS) },
                 signOutInProgress = signingOut,
                 onCheckForUpdates = {
                     updater?.showPrompt()
@@ -177,6 +183,99 @@ fun SabiNavGraph(
                     }
                 },
                 onBack = { navController.popBackStack() },
+            )
+        }
+        composable(SabiRoutes.ACCOUNTS) {
+            var busy by remember { mutableStateOf(false) }
+            var message by remember { mutableStateOf<String?>(null) }
+            var accounts by remember { mutableStateOf(container.tokenStore.listAccounts()) }
+            var active by remember { mutableStateOf(container.tokenStore.activeSlot) }
+            AccountsScreen(
+                accounts = accounts,
+                activeSlot = active,
+                busy = busy,
+                message = message,
+                onBack = { navController.popBackStack() },
+                onIdentify = {
+                    if (!busy) {
+                        busy = true
+                        message = null
+                        sessionScope.launch {
+                            try {
+                                container.authRepository.identifyCurrentSession()
+                                accounts = container.tokenStore.listAccounts()
+                            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                                throw cancelled
+                            } catch (error: Exception) {
+                                message = error.message ?: "Could not identify account."
+                            } finally { busy = false }
+                        }
+                    }
+                },
+                onRefresh = {
+                    if (!busy) {
+                        busy = true
+                        message = null
+                        sessionScope.launch {
+                            try {
+                                val epoch = container.tokenStore.sessionEpoch
+                                val access = container.authRepository.currentAccessToken() ?: error("Sign in again to refresh balance.")
+                                val result = container.guardianClient.fetchUserInfo(com.sabifox.vpn.data.GUARDIAN_ENDPOINT_DEFAULT, access)
+                                withContext(Dispatchers.IO) {
+                                    container.tokenStore.withCurrentSession(epoch) {
+                                        container.tokenStore.saveQuotaIfCurrent(epoch, result.quotaRemaining, result.maxBytes)
+                                        container.settingsStore.saveAccountQuota(
+                                            !result.limitedBandwidth && result.quotaRemaining == null && result.maxBytes == null,
+                                            result.quotaRemaining,
+                                            result.maxBytes,
+                                        )
+                                    }
+                                }
+                                accounts = container.tokenStore.listAccounts()
+                            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                                throw cancelled
+                            } catch (error: Exception) {
+                                message = error.message ?: "Could not refresh balance."
+                            } finally { busy = false }
+                        }
+                    }
+                },
+                onChoose = { slot ->
+                    if (!busy && com.sabifox.vpn.vpn.SabiFoxService.state.value == com.sabifox.vpn.data.model.ConnectionState.DISCONNECTED) {
+                        busy = true
+                        message = null
+                        sessionScope.launch {
+                            try {
+                                // Invalidate previous requests before choosing the destination account.
+                                withContext(Dispatchers.IO) {
+                                    container.tokenStore.selectAccount(slot)
+                                    container.settingsStore.clearAccountSession()
+                                    com.sabifox.vpn.data.ControlPlaneHttp.cookieJar.clear()
+                                }
+                                // Wait until WebView cookies are cleared so the next login does not silently use the previous account.
+                                kotlinx.coroutines.withTimeout(10_000L) {
+                                    kotlinx.coroutines.suspendCancellableCoroutine<Unit> { continuation ->
+                                        android.webkit.CookieManager.getInstance().removeAllCookies {
+                                            if (continuation.isActive) continuation.resumeWith(Result.success(Unit))
+                                        }
+                                    }
+                                }
+                                android.webkit.CookieManager.getInstance().flush()
+                                android.webkit.WebStorage.getInstance().deleteAllData()
+                                active = container.tokenStore.activeSlot
+                                accounts = container.tokenStore.listAccounts()
+                                val signedIn = accounts[active].signedIn
+                                navController.navigate(if (signedIn) SabiRoutes.HOME else SabiRoutes.LOGIN) {
+                                    popUpTo(0) { inclusive = true }
+                                }
+                            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                                throw cancelled
+                            } catch (error: Exception) {
+                                message = error.message ?: "Could not switch accounts."
+                            } finally { busy = false }
+                        }
+                    }
+                },
             )
         }
         composable(SabiRoutes.LOGS) { LogsScreen(onBack = { navController.popBackStack() }) }

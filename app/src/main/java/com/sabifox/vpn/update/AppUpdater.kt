@@ -94,14 +94,14 @@ internal class AppUpdater(private val context: Context) {
     private val mutableState = MutableStateFlow<UpdateState>(UpdateState.Idle)
     val state: StateFlow<UpdateState> = mutableState
     var automaticChecks: Boolean
-        get() = prefs.getBoolean("automatic_checks", true)
+        get() = !BuildConfig.DEBUG && prefs.getBoolean("automatic_checks", true)
         set(value) {
             prefs.edit().putBoolean("automatic_checks", value).apply()
         }
 
     /** Download, verify and install new releases from this app's own repository automatically. */
     var autoInstall: Boolean
-        get() = prefs.getBoolean("auto_install", true)
+        get() = !BuildConfig.DEBUG && prefs.getBoolean("auto_install", true)
         set(value) {
             prefs.edit().putBoolean("auto_install", value).apply()
             AutoUpdateScheduler.sync(context, value)
