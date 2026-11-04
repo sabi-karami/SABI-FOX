@@ -47,6 +47,7 @@ class SabiFoxApp : Application(), AppContainer {
         CrashReporter.replayLastCrashIfAny(this)
 
         appUpdater = AppUpdater(this)
+        com.sabifox.vpn.update.AutoUpdateScheduler.sync(this, appUpdater.autoInstall)
         tokenStore = TokenStore(this)
         proxyStateStore = ProxyStateStore(this)
         settingsStore = SettingsStore(this)

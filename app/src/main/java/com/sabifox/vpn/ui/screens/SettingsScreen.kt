@@ -89,8 +89,15 @@ fun SettingsScreen(
     onCheckForUpdates: (() -> Unit)? = null,
     automaticUpdates: Boolean = false,
     onAutomaticUpdatesChange: ((Boolean) -> Unit)? = null,
+    autoInstallUpdates: Boolean = false,
+    onAutoInstallUpdatesChange: ((Boolean) -> Unit)? = null,
+    canInstallUpdates: () -> Boolean = { true },
 ) {
     val context = LocalContext.current
+    var installAllowed by remember { mutableStateOf(canInstallUpdates()) }
+    androidx.lifecycle.compose.LifecycleEventEffect(androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+        installAllowed = canInstallUpdates()
+    }
     var automaticRecovery by remember { mutableStateOf(settingsStore.automaticRecovery) }
     val health by SabiFoxService.tunnelHealth.collectAsStateWithLifecycle()
     var dnsProvider by remember { mutableStateOf(settingsStore.dnsProvider) }
@@ -586,6 +593,34 @@ fun SettingsScreen(
                     onAutomaticUpdatesChange?.invoke(it)
                 },
             )
+            SettingsToggle(
+                title = stringResource(R.string.settings_auto_install_updates),
+                summary = stringResource(R.string.settings_auto_install_help),
+                checked = autoInstallUpdates,
+                enabled = onAutoInstallUpdatesChange != null,
+                onCheckedChange = { onAutoInstallUpdatesChange?.invoke(it) },
+            )
+            if (autoInstallUpdates && !installAllowed) {
+                ListItem(
+                    headlineContent = {
+                        Text(
+                            stringResource(R.string.settings_auto_install_permission),
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    },
+                    modifier =
+                        Modifier.clickable {
+                            runCatching {
+                                context.startActivity(
+                                    Intent(
+                                        android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                                        Uri.parse("package:${context.packageName}"),
+                                    )
+                                )
+                            }
+                        },
+                )
+            }
             ListItem(
                 headlineContent = { Text(stringResource(R.string.settings_source_code)) },
                 supportingContent = { Text(GITHUB_URL) },

@@ -54,9 +54,9 @@
     <string name="settings_logs_help">Recent connection activity</string>
     <string name="settings_version">Version</string>
     <string name="settings_check_for_updates">Check for updates</string>
-    <string name="settings_update_source">Signed releases from GitHub</string>
+    <string name="settings_update_source">Signed releases from github.com/sabi-karami/SABI-FOX only</string>
     <string name="settings_automatic_update_checks">Automatic update checks</string>
-    <string name="settings_automatic_updates_help">Check once a day when the app is opened; installation always needs approval</string>
+    <string name="settings_automatic_updates_help">Check once a day when the app is opened</string>
     <string name="settings_source_code">Source code</string>
     <string name="settings_sign_out">Sign out</string>
     <string name="settings_doh_url">DoH URL</string>
@@ -168,7 +168,7 @@
     <string name="update_current">No newer compatible update is available.</string>
     <string name="update_available_msg">Release %1$s is available. Download to verify its version, integrity and signing identity.</string>
     <string name="update_downloading_fmt">Downloading update: %1$d / %2$d MB</string>
-    <string name="update_ready_msg">Version %1$s is verified and ready. Android will ask you to approve installation. If asked, allow updates from SABI-FOX, return here and tap Install again.</string>
+    <string name="update_ready_msg">Version %1$s is verified (checksum and signature match). Tap Install: SABI-FOX updates itself and reconnects automatically.</string>
     <string name="update_btn_download">Download</string>
     <string name="update_btn_install">Install</string>
     <string name="update_btn_check">Check</string>
@@ -189,4 +189,13 @@
     <string name="theme_desc_system_dark">Theme: follows the system. Tap for dark mode</string>
     <string name="theme_desc_light">Theme: light. Tap for dark mode, long press to follow the system</string>
     <string name="theme_desc_dark">Theme: dark. Tap for light mode, long press to follow the system</string>
+    <string name="settings_auto_install_updates">Install updates automatically</string>
+    <string name="settings_auto_install_help">Downloads, verifies and installs new versions in the background (about every 6 hours). The VPN reconnects by itself afterwards.</string>
+    <string name="settings_auto_install_permission">Permission needed: tap to allow SABI-FOX to install its own updates</string>
+    <string name="update_notif_channel">App updates</string>
+    <string name="update_notif_confirm_title">SABI-FOX %1$s is ready</string>
+    <string name="update_notif_confirm_text">Tap to finish installing the update</string>
+    <string name="update_notif_failed_title">Update %1$s could not be installed</string>
+    <string name="update_notif_done_title">SABI-FOX updated to %1$s</string>
+    <string name="update_notif_done_text">The new version was verified and installed automatically.</string>
 </resources>

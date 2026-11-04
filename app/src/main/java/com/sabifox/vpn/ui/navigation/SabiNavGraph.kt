@@ -114,6 +114,7 @@ fun SabiNavGraph(
             val app = context.applicationContext as? com.sabifox.vpn.SabiFoxApp
             val updater = app?.appUpdater
             var autoUpdates by remember { mutableStateOf(updater?.automaticChecks ?: false) }
+            var autoInstall by remember { mutableStateOf(updater?.autoInstall ?: false) }
             SettingsScreen(
                 settingsStore = container.settingsStore,
                 onOpenLogs = { navController.navigate(SabiRoutes.LOGS) },
@@ -127,6 +128,22 @@ fun SabiNavGraph(
                     updater?.automaticChecks = enabled
                     autoUpdates = enabled
                 },
+                autoInstallUpdates = autoInstall,
+                onAutoInstallUpdatesChange = { enabled ->
+                    updater?.autoInstall = enabled
+                    autoInstall = enabled
+                    if (enabled && updater?.canInstallPackages() == false) {
+                        runCatching {
+                            context.startActivity(
+                                android.content.Intent(
+                                    android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                                    android.net.Uri.parse("package:${context.packageName}"),
+                                )
+                            )
+                        }
+                    }
+                },
+                canInstallUpdates = { updater?.canInstallPackages() ?: true },
                 onSignOut = signOut@{
                     if (signingOut) return@signOut
                     signingOut = true

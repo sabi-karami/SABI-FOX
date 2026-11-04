@@ -34,8 +34,29 @@ data class TunnelSettings(
         "TunnelSettings(proxyOnlyMode=$proxyOnlyMode, httpVersion=$httpVersion)"
 }
 
+private val sessionRandom = java.security.SecureRandom()
+
+private fun randomToken(bytes: Int): String {
+    val buffer = ByteArray(bytes)
+    sessionRandom.nextBytes(buffer)
+    return buffer.joinToString("") { "%02x".format(it) }
+}
+
+/**
+ * In full-VPN mode the local listener is only used internally (latency and exit-IP checks), so it
+ * is protected with random per-connection credentials. Otherwise any app on the device - including
+ * apps excluded through split tunneling - could use or detect the tunnel through 127.0.0.1.
+ */
+private fun SettingsStore.effectiveLocalProxyCredentials(): Triple<Boolean, String, String> =
+    when {
+        localProxyAuthEnabled -> Triple(true, localProxyUsername, localProxyPassword)
+        !proxyOnlyMode -> Triple(true, "sf" + randomToken(8), randomToken(24))
+        else -> Triple(false, "", "")
+    }
+
 fun SettingsStore.tunnelSnapshot(): TunnelSettings =
     synchronized(proxySettingsLock) {
+        val localAuth = effectiveLocalProxyCredentials()
         require(!upstreamProxyEnabled || !upstreamReviewRequired) {
             "Upstream TLS has been removed. Review the upstream proxy settings before connecting."
         }
@@ -53,9 +74,9 @@ fun SettingsStore.tunnelSnapshot(): TunnelSettings =
             ipv6Enabled = ipv6Enabled,
             maxConcurrentStreams = maxConcurrentStreams,
             mtu = mtu,
-            localProxyAuthEnabled = localProxyAuthEnabled,
-            localProxyUsername = if (localProxyAuthEnabled) localProxyUsername else "",
-            localProxyPassword = if (localProxyAuthEnabled) localProxyPassword else "",
+            localProxyAuthEnabled = localAuth.first,
+            localProxyUsername = localAuth.second,
+            localProxyPassword = localAuth.third,
             proxyOnlyMode = proxyOnlyMode,
             socksBindAddress = socksBindAddress,
             socksPort = socksPort,

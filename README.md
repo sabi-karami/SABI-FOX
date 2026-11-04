@@ -25,7 +25,10 @@
 - **Upstream proxy chaining**, custom edge override, TCP Fast Open, custom MTU
 - **Live diagnostics**: exit IP, latency, session data, quota
 - **Quick Settings tile & home-screen widget**
-- **Signed in-app updates** from this repository's releases
+- **Automatic self-updates** — SABI-FOX checks **only this repository's** releases, downloads the
+  APK for your device, verifies its SHA-256 checksum, package name and signing certificate, and
+  installs it in the background (silently on Android 12+, one tap on Android 8–11). An active VPN
+  reconnects by itself after the update.
 
 ## 🚀 Getting started
 
@@ -37,6 +40,18 @@
 > [!NOTE]
 > Access, quota and availability are controlled by Mozilla. SABI-FOX connects only to
 > official endpoints and respects account quotas.
+
+## 🔄 Automatic updates
+
+Settings → **Install updates automatically** (on by default). The first time, Android asks you to
+allow SABI-FOX to install apps — this is needed so it can update itself. Updates are only accepted
+when they are signed with the same SABI-FOX release key as the installed app.
+
+## 🔒 Privacy hardening
+
+- In full-VPN mode the internal local proxy is protected with random per-connection credentials,
+  so other apps (including split-tunnel-excluded ones) cannot use or detect the tunnel through it.
+- Release builds keep the core at `warn` log level and do not copy info logs to logcat.
 
 ## 🛠 Build from source
 

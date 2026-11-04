@@ -3,6 +3,10 @@ package com.sabifox.vpn.update
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageInfo
+import android.content.pm.PackageInstaller
+import com.sabifox.vpn.data.AppLogger
+import com.sabifox.vpn.data.model.ConnectionState
+import com.sabifox.vpn.vpn.SabiFoxService
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -40,6 +44,10 @@ private const val RELEASE_API = com.sabifox.vpn.data.AppLinks.RELEASE_API
 private const val MAX_APK_BYTES = 512L * 1024 * 1024
 private const val FAILED_CHECK_BACKOFF_MS = 15 * 60 * 1000L
 private const val CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000L
+private const val AUTO_MIN_INTERVAL_MS = 60 * 60 * 1000L
+private const val UPDATER_TAG = "AppUpdater"
+internal const val UPDATE_PREFS = "sabifox_updates"
+internal const val KEY_RECONNECT_AFTER_UPDATE = "reconnect_after_update"
 
 internal sealed interface UpdateState {
     data object Idle : UpdateState
@@ -58,7 +66,7 @@ internal sealed interface UpdateState {
 }
 
 internal class AppUpdater(private val context: Context) {
-    private val prefs = context.getSharedPreferences("sabifox_updates", Context.MODE_PRIVATE)
+    private val prefs = context.getSharedPreferences(UPDATE_PREFS, Context.MODE_PRIVATE)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     private val client =
@@ -91,8 +99,131 @@ internal class AppUpdater(private val context: Context) {
             prefs.edit().putBoolean("automatic_checks", value).apply()
         }
 
+    /** Download, verify and install new releases from this app's own repository automatically. */
+    var autoInstall: Boolean
+        get() = prefs.getBoolean("auto_install", true)
+        set(value) {
+            prefs.edit().putBoolean("auto_install", value).apply()
+            AutoUpdateScheduler.sync(context, value)
+        }
+
+    fun canInstallPackages(): Boolean = context.packageManager.canRequestPackageInstalls()
+
     init {
         directory.listFiles()?.forEach { it.delete() }
+    }
+
+    /** Fire-and-forget variant used when the app comes to the foreground. */
+    fun launchAutomaticUpdate() {
+        scope.launch { runAutomaticUpdate(fromBackground = false) }
+    }
+
+    /**
+     * Checks this app's own release channel, downloads the APK for this device, verifies SHA-256,
+     * package name, signing certificate and versionCode, then installs it through
+     * PackageInstaller. On Android 12+ the install completes without a prompt; older versions
+     * show the system confirmation once.
+     */
+    suspend fun runAutomaticUpdate(fromBackground: Boolean) {
+        if (!autoInstall || operation?.isActive == true) return
+        if (mutableState.value is UpdateState.Ready) return
+        if (!canInstallPackages()) {
+            if (!fromBackground) check(automatic = true)
+            return
+        }
+        val now = System.currentTimeMillis()
+        if (
+            !fromBackground &&
+                now - prefs.getLong("last_auto_attempt", 0) in 0 until AUTO_MIN_INTERVAL_MS
+        )
+            return
+        prefs.edit().putLong("last_auto_attempt", now).apply()
+        val job =
+            scope.launch {
+                val file = File(directory, "${UUID.randomUUID()}.apk")
+                var retain = false
+                try {
+                    val release =
+                        withContext(Dispatchers.IO) { discoverRelease(allowSameVersionName = false) }
+                    prefs.edit().putLong("last_successful_check", System.currentTimeMillis()).apply()
+                    if (release == null) {
+                        mutableState.value = UpdateState.Current
+                        return@launch
+                    }
+                    val myGeneration = synchronized(publicationLock) { ++generation }
+                    mutableState.value = UpdateState.Downloading(0, release.apk.size)
+                    val expectedHash = withContext(Dispatchers.IO) { expectedHash(release) }
+                    downloadAsset(release.apk, file, myGeneration)
+                    val version = withContext(Dispatchers.IO) { validateApk(file, expectedHash) }
+                    if (version == null) {
+                        mutableState.value = UpdateState.Current
+                        return@launch
+                    }
+                    val connected = SabiFoxService.state.value != ConnectionState.DISCONNECTED
+                    if (connected && !fromBackground) {
+                        // Do not drop an active tunnel while the user is looking at the app.
+                        retain = true
+                        mutableState.value = UpdateState.Ready(file, version, expectedHash)
+                        showPrompt()
+                        return@launch
+                    }
+                    withContext(Dispatchers.IO) { commitInstall(file, version, reconnect = connected) }
+                    AppLogger.i(UPDATER_TAG, "auto-update: install of $version committed")
+                    mutableState.value = UpdateState.Idle
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (error: Exception) {
+                    AppLogger.w(UPDATER_TAG, "auto-update failed", error)
+                    mutableState.value = UpdateState.Idle
+                } finally {
+                    if (!retain) file.delete()
+                }
+            }
+        operation = job
+        job.join()
+    }
+
+    /** Installs a verified update through PackageInstaller (no prompt on Android 12+). */
+    suspend fun installVerified(ready: UpdateState.Ready) {
+        withContext(Dispatchers.IO) {
+            val version =
+                checkNotNull(validateApk(ready.file, ready.sha256)) {
+                    "This update is no longer newer than the installed app"
+                }
+            commitInstall(
+                ready.file,
+                version,
+                reconnect = SabiFoxService.state.value != ConnectionState.DISCONNECTED,
+            )
+        }
+    }
+
+    private fun commitInstall(file: File, version: String, reconnect: Boolean) {
+        val installer = context.packageManager.packageInstaller
+        val params =
+            PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
+                setAppPackageName(context.packageName)
+                setSize(file.length())
+                setInstallReason(PackageManager.INSTALL_REASON_USER)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED)
+                }
+            }
+        val sessionId = installer.createSession(params)
+        try {
+            installer.openSession(sessionId).use { session ->
+                session.openWrite("base.apk", 0, file.length()).use { output ->
+                    file.inputStream().use { input -> input.copyTo(output, 64 * 1024) }
+                    session.fsync(output)
+                }
+                prefs.edit().putBoolean(KEY_RECONNECT_AFTER_UPDATE, reconnect).commit()
+                session.commit(UpdateInstallReceiver.statusIntentSender(context, sessionId, version))
+            }
+        } catch (error: Exception) {
+            runCatching { installer.abandonSession(sessionId) }
+            prefs.edit().remove(KEY_RECONNECT_AFTER_UPDATE).apply()
+            throw error
+        }
     }
 
     fun check(automatic: Boolean = false) {

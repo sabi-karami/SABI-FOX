@@ -64,7 +64,7 @@ object AppLogger {
     }
 
     fun i(tag: String, message: String) {
-        Log.i(tag, redact(message))
+        if (BuildConfig.DEBUG) Log.i(tag, redact(message))
         log(LogLevel.INFO, tag, message)
     }
 

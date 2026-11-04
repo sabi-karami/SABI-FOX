@@ -17,6 +17,7 @@ import androidx.navigation.compose.rememberNavController
 import com.sabifox.vpn.ui.navigation.SabiNavGraph
 import com.sabifox.vpn.ui.theme.SabiFoxTheme
 import com.sabifox.vpn.ui.theme.rememberThemeController
+import com.sabifox.vpn.update.AppVisibility
 import com.sabifox.vpn.update.UpdatePrompt
 import com.sabifox.vpn.vpn.SabiFoxService
 
@@ -69,7 +70,18 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        (application as SabiFoxApp).appUpdater.check(automatic = true)
+        val updater = (application as SabiFoxApp).appUpdater
+        if (updater.autoInstall) updater.launchAutomaticUpdate() else updater.check(automatic = true)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        AppVisibility.foreground = true
+    }
+
+    override fun onPause() {
+        AppVisibility.foreground = false
+        super.onPause()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

@@ -90,7 +90,11 @@ internal fun UpdatePrompt(updater: AppUpdater) {
                             installing = true
                             scope.launch {
                                 try {
-                                    context.startActivity(updater.installationIntent(current))
+                                    if (updater.canInstallPackages()) {
+                                        updater.installVerified(current)
+                                    } else {
+                                        context.startActivity(updater.installationIntent(current))
+                                    }
                                 } catch (cancelled: CancellationException) {
                                     throw cancelled
                                 } catch (error: Exception) {

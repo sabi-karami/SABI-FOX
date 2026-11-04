@@ -105,7 +105,7 @@ object SingBoxConfigBuilder {
 
         val log =
             JSONObject().apply {
-                put("level", "info")
+                put("level", if (com.sabifox.vpn.BuildConfig.DEBUG) "info" else "warn")
                 put("timestamp", true)
             }
         root.put("log", log)
