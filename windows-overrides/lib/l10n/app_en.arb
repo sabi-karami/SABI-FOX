@@ -1,0 +1,396 @@
+{
+  "@@locale": "en",
+  "navHome": "Home",
+  "navServers": "Servers",
+  "navSettings": "Settings",
+  "navLogs": "Logs",
+  "actionCancel": "Cancel",
+  "elevationDialogTitle": "Administrator access required",
+  "elevationDialogBody": "Tunnel mode creates a network adapter and changes system routes and DNS, which Windows allows only with Administrator rights.\n\nSABI-FOX will restart with Administrator access. Proxy and Windows Proxy modes keep running without it.",
+  "elevationContinue": "Restart as Administrator",
+  "elevationDenied": "Administrator access was not granted, so Tunnel mode cannot start. Proxy and Windows Proxy modes still work.",
+  "elevationFailed": "SABI-FOX could not restart with Administrator access.",
+  "actionSignOut": "Sign out",
+  "signOutDialogTitle": "Sign out?",
+  "signOutDialogBody": "The tunnel will be disconnected and your Mozilla account session removed from this device.",
+  "statusDisconnected": "Disconnected",
+  "statusConnecting": "Connecting…",
+  "statusWaitingForNetwork": "Waiting for network…",
+  "statusReconnecting": "Reconnecting…",
+  "statusTunnelActive": "Tunnel • {country}",
+  "@statusTunnelActive": {
+    "placeholders": {
+      "country": {
+        "type": "String"
+      }
+    }
+  },
+  "statusSystemProxyActive": "System proxy • {address}",
+  "@statusSystemProxyActive": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "statusProxyActive": "Proxy • {address}",
+  "@statusProxyActive": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "homeEstablishingTunnel": "Establishing the connection…",
+  "homeTrafficUnprotected": "Your traffic is not protected",
+  "homeLocalProxy": "Local proxy at {address}",
+  "@homeLocalProxy": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "statDownload": "Download",
+  "statUpload": "Upload",
+  "quotaPending": "Quota information appears once the tunnel connects.",
+  "quotaLeftOf": "{remaining} left of {max}",
+  "@quotaLeftOf": {
+    "placeholders": {
+      "remaining": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "quotaLeft": "{remaining} left",
+  "@quotaLeft": {
+    "placeholders": {
+      "remaining": {
+        "type": "String"
+      }
+    }
+  },
+  "autoSelectedLocation": "Auto-selected location",
+  "homeSplitTunnelRules": "{count} split-tunnel rule(s) armed",
+  "@homeSplitTunnelRules": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeSplitTunnelBypassed": "{count} connection(s) went around the VPN",
+  "@homeSplitTunnelBypassed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dataUsageTitle": "Data usage",
+  "dataUsageSinceStart": "Since SABI-FOX started",
+  "dataUsageReset": "Reset the counters",
+  "notificationsTitle": "Connection notifications",
+  "notificationsSubtitle": "Show a Windows notification when the VPN connects or disconnects",
+  "minimizeToTrayTitle": "Minimize to system tray",
+  "minimizeToTraySubtitle": "Keep the VPN running in the notification area; use its icon to reopen the window or quit",
+  "trayTooltip": "SABI-FOX is running",
+  "trayShow": "Show SABI-FOX",
+  "trayQuit": "Quit SABI-FOX",
+  "notificationConnectedTitle": "SABI-FOX connected",
+  "notificationConnectedBody": "Your traffic is now protected.",
+  "notificationConnectedBodyLocation": "Your traffic is now protected • Exit: {location}",
+  "@notificationConnectedBodyLocation": {
+    "placeholders": {
+      "location": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationDisconnectedTitle": "SABI-FOX disconnected",
+  "notificationDisconnectedBody": "Your traffic is no longer protected.",
+  "exitLocation": "Exit location: {location}",
+  "@exitLocation": {
+    "placeholders": {
+      "location": {
+        "type": "String"
+      }
+    }
+  },
+  "serverCardRecommended": "Recommended (automatic)",
+  "serverCardPickLocation": "Pick a location on the Servers tab",
+  "loginSubtitle": "Sign in with your Mozilla account",
+  "loginTwoFactorSubtitle": "Enter the verification code sent to your email",
+  "loginEmailLabel": "Email",
+  "loginPasswordLabel": "Password",
+  "loginCodeLabel": "Verification code",
+  "loginEmailInvalid": "Enter a valid email address",
+  "loginPasswordRequired": "Enter your password",
+  "loginSignIn": "Sign in",
+  "loginVerify": "Verify",
+  "loginBackToSignIn": "Back to sign-in",
+  "serversTitle": "Locations",
+  "serversReload": "Reload",
+  "serversRecommended": "Recommended for you",
+  "serversRecommendedSubtitle": "Choose automatically from the fastest available country",
+  "serversAutoChosen": "Location will be chosen automatically",
+  "serversLocationSet": "Location set to {country} ({authority})",
+  "@serversLocationSet": {
+    "placeholders": {
+      "country": {
+        "type": "String"
+      },
+      "authority": {
+        "type": "String"
+      }
+    }
+  },
+  "serversLoadFailed": "Could not load the server list: {error}",
+  "@serversLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "serversNoneAvailable": "No locations are available right now.",
+  "serversBundledSnapshot": "The live server list could not be reached, so the copy bundled with the app is shown. It may be outdated.",
+  "serversNoServers": "No usable servers in this country.",
+  "serversCityCount": "{count} city(ies)",
+  "@serversCityCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "serversPort": "port {port}",
+  "@serversPort": {
+    "placeholders": {
+      "port": {
+        "type": "int"
+      }
+    }
+  },
+  "serversPinging": "pinging…",
+  "serversPingUnavailable": "ping unavailable",
+  "serversPingResult": "{ms} ms",
+  "@serversPingResult": {
+    "placeholders": {
+      "ms": {
+        "type": "int"
+      }
+    }
+  },
+  "serversSearchHint": "Search countries",
+  "serversNoMatch": "No country matches “{query}”.",
+  "@serversNoMatch": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "serversTryAgain": "Try again",
+  "sectionAppearance": "Appearance",
+  "sectionLanguage": "Language",
+  "sectionConnection": "Connection",
+  "sectionConnectionMode": "Connection mode",
+  "connectionModeProxy": "Proxy",
+  "connectionModeSystemProxy": "System proxy",
+  "connectionModeTunnel": "Tunnel",
+  "connectionModeProxyDesc": "Only apps manually configured to use the local proxy (127.0.0.1:21080) are routed through the VPN.",
+  "connectionModeSystemProxyDesc": "Windows system proxy is set automatically so most apps (browsers, etc.) route through the VPN without manual configuration.",
+  "connectionModeTunnelDesc": "Full system-wide VPN: all traffic is routed through the tunnel via a Wintun adapter. Requires running as Administrator.",
+  "connectionModeProxyOnlyNote": "Tunnel and system proxy modes are Windows-only for now; on this platform SABI-FOX runs the local proxy.",
+  "sectionLocalProxy": "Local proxy (SOCKS5 + HTTP)",
+  "sectionUpstreamProxy": "Upstream proxy",
+  "sectionTunnelEngine": "Tunnel engine",
+  "sectionAbout": "About",
+  "sectionGeneral": "General",
+  "sectionDns": "DNS",
+  "sectionAdvanced": "Advanced",
+  "advancedSubtitle": "Local proxy, pinned edge and the tunnel engine",
+  "themeAuto": "Auto",
+  "themeLight": "Light",
+  "themeDark": "Dark",
+  "languageSystem": "Auto",
+  "languageEnglish": "English",
+  "languagePersian": "فارسی",
+  "exitCheckTitle": "Connection test after connecting",
+  "exitCheckSubtitle": "Fetch a small HTTPS page through the VPN, show the exit country, and log a warning on mismatch",
+  "connectionTestTitle": "Connection test",
+  "connectionTestIdle": "Check that traffic actually reaches the internet through the VPN.",
+  "connectionTestRunning": "Testing through the VPN…",
+  "connectionTestPassed": "Passed in {ms} ms",
+  "@connectionTestPassed": {
+    "placeholders": {
+      "ms": {
+        "type": "int"
+      }
+    }
+  },
+  "connectionTestPassedWithCountry": "Passed in {ms} ms • Exit: {country}",
+  "@connectionTestPassedWithCountry": {
+    "placeholders": {
+      "ms": {
+        "type": "int"
+      },
+      "country": {
+        "type": "String"
+      }
+    }
+  },
+  "connectionTestFailed": "Failed: {error}",
+  "@connectionTestFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "connectionTestRunAgain": "Run again",
+  "customDnsFallbackNotice": "Custom DNS {server} did not answer through the VPN, so the built-in resolver is active for this connection.",
+  "@customDnsFallbackNotice": {
+    "placeholders": {
+      "server": {
+        "type": "String"
+      }
+    }
+  },
+  "noticeDismiss": "Dismiss",
+  "dohTitle": "DNS-over-HTTPS resolver (for edge resolution)",
+  "customDnsTitle": "Custom DNS server for the tunnel",
+  "customDnsSubtitle": "Hand this resolver to apps instead of the built-in fake-DNS. It must answer DNS over TCP through the tunnel; SABI-FOX falls back automatically when it cannot",
+  "customDnsLabel": "Custom DNS server (IPv4)",
+  "customDnsHelper": "e.g. 1.1.1.1",
+  "errorInvalidDns": "Invalid DNS server address",
+  "pinnedEdgeLabel": "Pinned edge address (optional)",
+  "pinnedEdgeHelper": "Force every connection to dial this Fastly edge IP",
+  "errorInvalidHostOrIp": "Invalid hostname or IP address",
+  "bindAddressLabel": "Bind address",
+  "localProxyApplyHint": "Applies at once in proxy-only mode; in full-VPN mode it takes effect on the next connect",
+  "errorInvalidIp": "Invalid IP address",
+  "portLabel": "Port",
+  "errorInvalidPort": "Invalid port number",
+  "sectionSplitTunnel": "Split tunneling",
+  "splitTunnelTitle": "Split tunneling by destination",
+  "splitTunnelSubtitle": "Send chosen domains and address ranges around the VPN. Per-app rules are not possible: the tunnel cannot see which process opened a connection.",
+  "splitTunnelDefaultTitle": "Traffic that matches no rule",
+  "splitTunnelActionTunnel": "Via VPN",
+  "splitTunnelActionDirect": "Bypass VPN",
+  "splitTunnelActionLabel": "Action for the rule you add next",
+  "splitTunnelPatternLabel": "Domain or address",
+  "splitTunnelPatternHelper": "e.g. .ir, example.com, 203.0.113.7 or 192.168.0.0/16",
+  "splitTunnelAddRule": "Add rule",
+  "splitTunnelInvalidPattern": "Not a usable domain or address",
+  "splitTunnelNoRules": "No rules yet. Add a TLD such as .ir, a hostname, or an IPv4 range.",
+  "splitTunnelDeleteRule": "Remove this rule",
+  "splitTunnelApplyHint": "Rules apply to new connections. IPv4 only: the tunnel carries no IPv6 traffic, so IPv6 already leaves the VPN.",
+  "upstreamTitle": "Use an upstream proxy",
+  "upstreamSubtitle": "Route everything (sign-in, Guardian, server list and the edge dials) through a SOCKS5 or HTTP proxy; credentials apply to the edge connection",
+  "proxyTypeLabel": "Proxy type",
+  "proxyTypeHttp": "HTTP (CONNECT)",
+  "proxyHostLabel": "Proxy host",
+  "proxyPortLabel": "Proxy port",
+  "copyFromSystemProxy": "Copy from Windows system proxy",
+  "noSystemProxyConfigured": "Windows has no system proxy configured",
+  "unparsableSystemProxy": "Could not understand the Windows proxy setting: {value}",
+  "@unparsableSystemProxy": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "proxyUsernameLabel": "Proxy username (optional)",
+  "proxyPasswordLabel": "Proxy password (optional)",
+  "saveCredentials": "Save credentials",
+  "credentialsSaved": "Proxy credentials saved",
+  "tunnelPathLabel": "hev-socks5-tunnel.exe path",
+  "tunnelPathHelper": "Leave empty to look next to the app executable (or in bin\\). Required for full-VPN mode; proxy-only mode does not need it.",
+  "aboutBody": "SABI-FOX Windows preview uses Mozilla services. Quota depends on your account. Full tunnel mode changes routes and DNS and requires administrator access. IPv6 is not protected.",
+  "aboutSource": "Source: github.com/M-RTZ1/SABI-FOX",
+  "copySourceUrl": "Copy the project source URL",
+  "sourceUrlCopied": "Source URL copied",
+  "logsTitle": "Logs",
+  "logsShowOldestFirst": "Show oldest first",
+  "logsShowNewestFirst": "Show newest first",
+  "logsCopyAll": "Copy all",
+  "logsExportToFile": "Export to file",
+  "logsClear": "Clear",
+  "logsEmpty": "No log entries yet.",
+  "logsCopiedToClipboard": "Logs copied to the clipboard",
+  "logsExported": "Log exported to {path}",
+  "@logsExported": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "logsExportFailed": "Export failed: {error}",
+  "@logsExportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutVersion": "Version {version}",
+  "@aboutVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "updateCheckAction": "Check for updates",
+  "updateChecking": "Checking GitHub…",
+  "updateUpToDate": "You are on the newest release ({version})",
+  "@updateUpToDate": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "updateNonePublished": "No release has been published on GitHub yet",
+  "updateFailed": "The update check failed: {error}",
+  "@updateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "updateAvailableTitle": "SABI-FOX {latest} is available",
+  "@updateAvailableTitle": {
+    "placeholders": {
+      "latest": {
+        "type": "String"
+      }
+    }
+  },
+  "updateAvailableBody": "You are running version {current}. Download the new build from its GitHub release.",
+  "@updateAvailableBody": {
+    "placeholders": {
+      "current": {
+        "type": "String"
+      }
+    }
+  },
+  "updateActionDownload": "Download {asset}",
+  "@updateActionDownload": {
+    "placeholders": {
+      "asset": {
+        "type": "String"
+      }
+    }
+  },
+  "updateActionOpenRelease": "Open the release page",
+  "updateActionNotNow": "Not now"
+}

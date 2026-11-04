@@ -1,0 +1,35 @@
+name: Windows development checks (not a release)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: windows-preview
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.9'
+          channel: stable
+          cache: true
+      - name: Obtain pinned development source
+        shell: pwsh
+        working-directory: .
+        run: |
+          curl.exe -fL --retry 3 -o source.zip https://codeload.github.com/M-RTZ1/FoxyVPN/zip/cc2e169207d8866e92be20216dfed8069068d4de
+          if ((Get-FileHash source.zip -Algorithm SHA256).Hash.ToLower() -ne '5fcb5d3dc0176290033424e5676f855b18fef74b1d992322bdca9cc6630069b7') { throw 'Source archive checksum mismatch' }
+          Expand-Archive source.zip -DestinationPath source
+          Move-Item source/FoxyVPN-cc2e169207d8866e92be20216dfed8069068d4de windows-preview
+          Copy-Item windows-overrides/* windows-preview -Recurse -Force
+      - run: flutter --version
+      - run: flutter pub get --enforce-lockfile
+      - run: flutter analyze
+      - run: flutter test
+      - run: flutter build windows --release

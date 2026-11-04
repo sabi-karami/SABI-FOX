@@ -1,0 +1,219 @@
+import 'package:flutter/material.dart';
+
+import '../data/fxa_auth_repository.dart';
+import '../data/token_store.dart';
+import '../l10n/generated/app_localizations.dart';
+
+/// Firefox Accounts sign-in: email + password, then an email-2FA code step
+/// when the account requires it.
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({required this.onSignedIn, super.key});
+
+  final VoidCallback onSignedIn;
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _codeController = TextEditingController();
+
+  /// startLogin() keeps the pending session token on the instance, so the 2FA
+  /// step has to run on the same object — a fresh repository would always
+  /// throw "No pending FxA session".
+  final _auth = FxaAuthRepository(TokenStore.instance);
+
+  bool _twoFactorStep = false;
+  bool _busy = false;
+  bool _obscurePassword = true;
+  String? _error;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    _codeController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _signIn() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final needsTwoFactor = await _auth.startLogin(
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
+      if (!mounted) return;
+      if (needsTwoFactor) {
+        setState(() {
+          _twoFactorStep = true;
+          _busy = false;
+        });
+      } else {
+        widget.onSignedIn();
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _error = e is FxaApiError ? e.message : e.toString();
+      });
+    }
+  }
+
+  Future<void> _submitCode() async {
+    final code = _codeController.text.trim();
+    if (code.isEmpty) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await _auth.submitTwoFactorCode(code);
+      if (!mounted) return;
+      widget.onSignedIn();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _error = e is FxaApiError ? e.message : e.toString();
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Icon(Icons.vpn_lock_rounded, size: 64, color: scheme.primary),
+                  const SizedBox(height: 12),
+                  Text(
+                    'SABI-FOX',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context)
+                        .textTheme
+                        .headlineSmall
+                        ?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _twoFactorStep
+                        ? l10n.loginTwoFactorSubtitle
+                        : l10n.loginSubtitle,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                  ),
+                  const SizedBox(height: 28),
+                  if (!_twoFactorStep) ...[
+                    TextFormField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      autofillHints: const [AutofillHints.email],
+                      decoration: InputDecoration(
+                        labelText: l10n.loginEmailLabel,
+                        prefixIcon: const Icon(Icons.alternate_email),
+                        border: const OutlineInputBorder(),
+                      ),
+                      validator: (v) => (v == null || !v.contains('@'))
+                          ? l10n.loginEmailInvalid
+                          : null,
+                    ),
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: _passwordController,
+                      obscureText: _obscurePassword,
+                      autofillHints: const [AutofillHints.password],
+                      onFieldSubmitted: (_) => _busy ? null : _signIn(),
+                      decoration: InputDecoration(
+                        labelText: l10n.loginPasswordLabel,
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        border: const OutlineInputBorder(),
+                        suffixIcon: IconButton(
+                          icon: Icon(_obscurePassword
+                              ? Icons.visibility
+                              : Icons.visibility_off),
+                          onPressed: () => setState(
+                              () => _obscurePassword = !_obscurePassword),
+                        ),
+                      ),
+                      validator: (v) => (v == null || v.isEmpty)
+                          ? l10n.loginPasswordRequired
+                          : null,
+                    ),
+                  ] else ...[
+                    TextFormField(
+                      controller: _codeController,
+                      keyboardType: TextInputType.number,
+                      autofocus: true,
+                      onFieldSubmitted: (_) => _busy ? null : _submitCode(),
+                      decoration: InputDecoration(
+                        labelText: l10n.loginCodeLabel,
+                        prefixIcon: const Icon(Icons.pin_outlined),
+                        border: const OutlineInputBorder(),
+                      ),
+                    ),
+                  ],
+                  if (_error != null) ...[
+                    const SizedBox(height: 14),
+                    Text(
+                      _error!,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: scheme.error, fontSize: 13),
+                    ),
+                  ],
+                  const SizedBox(height: 22),
+                  FilledButton(
+                    onPressed: _busy
+                        ? null
+                        : (_twoFactorStep ? _submitCode : _signIn),
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size.fromHeight(48),
+                    ),
+                    child: _busy
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(strokeWidth: 2.5),
+                          )
+                        : Text(_twoFactorStep ? l10n.loginVerify : l10n.loginSignIn),
+                  ),
+                  if (_twoFactorStep) ...[
+                    const SizedBox(height: 10),
+                    TextButton(
+                      onPressed: _busy
+                          ? null
+                          : () => setState(() {
+                                _twoFactorStep = false;
+                                _error = null;
+                              }),
+                      child: Text(l10n.loginBackToSignIn),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

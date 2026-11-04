@@ -1,0 +1,278 @@
+{
+  "@@locale": "fa",
+  "navHome": "خانه",
+  "navServers": "سرورها",
+  "navSettings": "تنظیمات",
+  "navLogs": "گزارش‌ها",
+  "actionCancel": "انصراف",
+  "elevationDialogTitle": "دسترسی Administrator لازم است",
+  "elevationDialogBody": "حالت Tunnel یک network adapter می‌سازد و routeها و DNS سیستم را تغییر می‌دهد؛ Windows این کار را فقط با دسترسی Administrator اجازه می‌دهد.\n\nSABI-FOX با دسترسی Administrator دوباره اجرا می‌شود. حالت‌های Proxy و Windows Proxy بدون این دسترسی کار می‌کنند.",
+  "elevationContinue": "اجرای مجدد با Administrator",
+  "elevationDenied": "دسترسی Administrator داده نشد؛ Tunnel شروع نمی‌شود. حالت‌های Proxy و Windows Proxy همچنان کار می‌کنند.",
+  "elevationFailed": "اجرای مجدد SABI-FOX با دسترسی Administrator ممکن نشد.",
+  "actionSignOut": "خروج از حساب",
+  "signOutDialogTitle": "خروج از حساب؟",
+  "signOutDialogBody": "اتصال قطع می‌شود و نشست Mozilla account شما از این دستگاه حذف می‌شود.",
+  "statusDisconnected": "قطع است",
+  "statusConnecting": "در حال اتصال…",
+  "statusWaitingForNetwork": "در انتظار شبکه…",
+  "statusReconnecting": "اتصال دوباره…",
+  "statusTunnelActive": "تونل • {country}",
+  "statusSystemProxyActive": "پراکسی سیستم • {address}",
+  "statusProxyActive": "پراکسی • {address}",
+  "homeEstablishingTunnel": "در حال برقراری اتصال…",
+  "homeTrafficUnprotected": "ترافیک شما محافظت نمی‌شود",
+  "homeLocalProxy": "پراکسی محلی روی {address}",
+  "statDownload": "دانلود",
+  "statUpload": "آپلود",
+  "quotaPending": "اطلاعات سهمیه پس از برقراری اتصال تونل نمایش داده می‌شود.",
+  "quotaLeftOf": "{remaining} باقی‌مانده از {max}",
+  "quotaLeft": "{remaining} باقی‌مانده",
+  "autoSelectedLocation": "موقعیت خودکار",
+  "homeSplitTunnelRules": "{count} قانون split tunneling آماده است",
+  "homeSplitTunnelBypassed": "{count} اتصال بدون VPN (مستقیم) برقرار شد",
+  "dataUsageTitle": "مصرف داده",
+  "dataUsageSinceStart": "از زمان اجرای SABI-FOX",
+  "dataUsageReset": "صفر کردن شمارنده‌ها",
+  "notificationsTitle": "اعلان‌های اتصال",
+  "notificationsSubtitle": "هنگام اتصال یا قطع‌شدن VPN یک اعلان ویندوز نمایش داده شود",
+  "minimizeToTrayTitle": "کوچک‌کردن به System Tray",
+  "minimizeToTraySubtitle": "VPN در سینی سیستم اجرا می‌ماند؛ با آیکون آن پنجره را باز کنید یا خارج شوید",
+  "trayTooltip": "SABI-FOX در حال اجراست",
+  "trayShow": "نمایش SABI-FOX",
+  "trayQuit": "خروج از SABI-FOX",
+  "notificationConnectedTitle": "SABI-FOX متصل شد",
+  "notificationConnectedBody": "ترافیک شما اکنون محافظت می‌شود.",
+  "notificationConnectedBodyLocation": "ترافیک شما اکنون محافظت می‌شود • خروج: {location}",
+  "@notificationConnectedBodyLocation": {
+    "placeholders": {
+      "location": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationDisconnectedTitle": "SABI-FOX قطع شد",
+  "notificationDisconnectedBody": "ترافیک شما دیگر محافظت نمی‌شود.",
+  "exitLocation": "موقعیت خروج: {location}",
+  "serverCardRecommended": "پیشنهادی (خودکار)",
+  "serverCardPickLocation": "از بخش سرورها یک موقعیت انتخاب کنید",
+  "loginSubtitle": "با Mozilla account خود وارد شوید",
+  "loginTwoFactorSubtitle": "کد تأیید ارسال‌شده به ایمیل خود را وارد کنید",
+  "loginEmailLabel": "ایمیل",
+  "loginPasswordLabel": "رمز عبور",
+  "loginCodeLabel": "کد تأیید",
+  "loginEmailInvalid": "یک نشانی ایمیل معتبر وارد کنید",
+  "loginPasswordRequired": "رمز عبور خود را وارد کنید",
+  "loginSignIn": "ورود",
+  "loginVerify": "تأیید",
+  "loginBackToSignIn": "بازگشت به صفحه‌ی ورود",
+  "serversTitle": "موقعیت‌ها",
+  "serversReload": "بارگذاری دوباره",
+  "serversRecommended": "پیشنهادی برای شما",
+  "serversRecommendedSubtitle": "به‌صورت خودکار از سریع‌ترین کشور موجود انتخاب می‌شود",
+  "serversAutoChosen": "موقعیت به‌صورت خودکار انتخاب خواهد شد",
+  "serversLocationSet": "موقعیت تنظیم شد: {country} ({authority})",
+  "serversLoadFailed": "فهرست سرورها بارگذاری نشد: {error}",
+  "serversNoneAvailable": "در حال حاضر هیچ موقعیتی در دسترس نیست.",
+  "serversBundledSnapshot": "فهرست زندهٔ سرورها در دسترس نبود؛ نسخهٔ همراه برنامه نمایش داده می‌شود و ممکن است قدیمی باشد.",
+  "serversNoServers": "هیچ سرور قابل‌استفاده‌ای در این کشور نیست.",
+  "serversCityCount": "{count} شهر",
+  "serversPort": "پورت {port}",
+  "serversPinging": "در حال پینگ…",
+  "serversPingUnavailable": "پینگ در دسترس نیست",
+  "serversPingResult": "{ms} میلی‌ثانیه",
+  "@serversPingResult": {
+    "placeholders": {
+      "ms": {
+        "type": "int"
+      }
+    }
+  },
+  "serversSearchHint": "جست‌وجوی کشور",
+  "serversNoMatch": "کشوری با «{query}» پیدا نشد.",
+  "@serversNoMatch": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "serversTryAgain": "تلاش دوباره",
+  "sectionAppearance": "ظاهر",
+  "sectionLanguage": "زبان",
+  "sectionConnection": "اتصال",
+  "sectionConnectionMode": "حالت اتصال",
+  "connectionModeProxy": "پراکسی",
+  "connectionModeSystemProxy": "پراکسی سیستم",
+  "connectionModeTunnel": "تونل",
+  "connectionModeProxyDesc": "فقط برنامه‌هایی که به‌صورت دستی پراکسی محلی (127.0.0.1:21080) را تنظیم کرده‌اند از VPN عبور می‌کنند.",
+  "connectionModeSystemProxyDesc": "پراکسی سیستم ویندوز به‌صورت خودکار تنظیم می‌شود تا اکثر برنامه‌ها (مرورگرها و غیره) بدون پیکربندی دستی از VPN استفاده کنند.",
+  "connectionModeTunnelDesc": "VPN کامل سیستمی: تمام ترافیک از طریق آداپتور Wintun از تونل عبور می‌کند. نیاز به اجرا به‌عنوان Administrator دارد.",
+  "connectionModeProxyOnlyNote": "حالت‌های تونل و پراکسی سیستم فعلاً فقط در ویندوز پشتیبانی می‌شوند؛ روی این پلتفرم SABI-FOX به‌صورت پراکسی محلی کار می‌کند.",
+  "sectionLocalProxy": "پراکسی محلی (SOCKS5 + HTTP)",
+  "sectionUpstreamProxy": "پراکسی بالادستی",
+  "sectionTunnelEngine": "موتور تونل",
+  "sectionAbout": "درباره",
+  "sectionGeneral": "عمومی",
+  "sectionDns": "DNS",
+  "sectionAdvanced": "پیشرفته",
+  "advancedSubtitle": "پراکسی محلی، edge ثابت و موتور تونل",
+  "themeAuto": "خودکار",
+  "themeLight": "روشن",
+  "themeDark": "تیره",
+  "languageSystem": "خودکار",
+  "languageEnglish": "English",
+  "languagePersian": "فارسی",
+  "exitCheckTitle": "تست اتصال پس از برقراری",
+  "exitCheckSubtitle": "یک صفحه‌ی کوچک HTTPS را از طریق VPN دریافت می‌کند، کشور خروج را نشان می‌دهد و در صورت عدم تطابق هشدار ثبت می‌کند",
+  "connectionTestTitle": "تست اتصال",
+  "connectionTestIdle": "بررسی کنید که ترافیک واقعاً از طریق VPN به اینترنت می‌رسد.",
+  "connectionTestRunning": "در حال تست از طریق VPN…",
+  "connectionTestPassed": "موفق در {ms} میلی‌ثانیه",
+  "@connectionTestPassed": {
+    "placeholders": {
+      "ms": {
+        "type": "int"
+      }
+    }
+  },
+  "connectionTestPassedWithCountry": "موفق در {ms} میلی‌ثانیه • خروج: {country}",
+  "@connectionTestPassedWithCountry": {
+    "placeholders": {
+      "ms": {
+        "type": "int"
+      },
+      "country": {
+        "type": "String"
+      }
+    }
+  },
+  "connectionTestFailed": "ناموفق: {error}",
+  "@connectionTestFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "connectionTestRunAgain": "اجرای دوباره",
+  "customDnsFallbackNotice": "DNS سفارشی {server} از طریق VPN پاسخ نداد؛ برای این اتصال resolver داخلی فعال است.",
+  "@customDnsFallbackNotice": {
+    "placeholders": {
+      "server": {
+        "type": "String"
+      }
+    }
+  },
+  "noticeDismiss": "بستن",
+  "dohTitle": "resolver برای DNS-over-HTTPS (نام edge)",
+  "customDnsTitle": "سرور DNS سفارشی برای تونل",
+  "customDnsSubtitle": "این resolver به‌جای fake-DNS داخلی به برنامه‌ها داده می‌شود. باید DNS روی TCP را از تونل پاسخ دهد؛ در غیر این صورت SABI-FOX خودکار به resolver داخلی برمی‌گردد",
+  "customDnsLabel": "سرور DNS سفارشی (IPv4)",
+  "customDnsHelper": "مثلاً 1.1.1.1",
+  "errorInvalidDns": "نشانی DNS معتبر نیست",
+  "pinnedEdgeLabel": "آدرس ثابت edge (اختیاری)",
+  "pinnedEdgeHelper": "همه‌ی اتصال‌ها را به dial کردن این IP از edge فستلی مجبور می‌کند",
+  "errorInvalidHostOrIp": "hostname یا IP معتبر نیست",
+  "bindAddressLabel": "نشانی bind",
+  "localProxyApplyHint": "در حالت فقط‌پراکسی بلافاصله اعمال می‌شود؛ در حالت تمام‌VPN از اتصال بعدی",
+  "errorInvalidIp": "نشانی IP معتبر نیست",
+  "portLabel": "پورت",
+  "errorInvalidPort": "شماره‌ی پورت معتبر نیست",
+  "sectionSplitTunnel": "تونل تفکیکی (Split tunneling)",
+  "splitTunnelTitle": "تونل تفکیکی بر پایه‌ی مقصد",
+  "splitTunnelSubtitle": "دامنه‌ها و بازه‌های آدرس دلخواه را بدون VPN ارسال کنید. تفکیک بر پایه‌ی برنامه ممکن نیست، چون tunnel نمی‌فهمد کدام برنامه اتصال را باز کرده است.",
+  "splitTunnelDefaultTitle": "ترافیکی که به هیچ قاعده‌ای نمی‌خورد",
+  "splitTunnelActionTunnel": "از VPN",
+  "splitTunnelActionDirect": "بدون VPN",
+  "splitTunnelActionLabel": "عمل قاعده‌ای که افزودن آن را شروع کرده‌اید",
+  "splitTunnelPatternLabel": "دامنه یا نشانی",
+  "splitTunnelPatternHelper": "مثلاً .ir یا example.com یا 203.0.113.7 یا 192.168.0.0/16",
+  "splitTunnelAddRule": "افزودن قاعده",
+  "splitTunnelInvalidPattern": "دامنه یا نشانی قابل‌استفاده نیست",
+  "splitTunnelNoRules": "هنوز قاعده‌ای نیست. یک TLD مثل .ir، یک دامنه یا یک بازه‌ی IPv4 اضافه کنید.",
+  "splitTunnelDeleteRule": "حذف این قاعده",
+  "splitTunnelApplyHint": "قاعده‌ها روی اتصال‌های تازه اعمال می‌شوند. فقط IPv4: تونل مسیر IPv6 را ندارد، پس ترافیک IPv6 از قبل بدون VPN می‌رود.",
+  "upstreamTitle": "استفاده از پراکسی بالادستی",
+  "upstreamSubtitle": "همه‌ی درخواست‌ها (ورود، Guardian، فهرست سرور و اتصال به edge) از یک پراکسی SOCKS5 یا HTTP عبور می‌کنند؛ نام‌کاربری و رمز فقط برای اتصال به edge اعمال می‌شود",
+  "proxyTypeLabel": "نوع پراکسی",
+  "proxyTypeHttp": "HTTP (CONNECT)",
+  "proxyHostLabel": "سرور پراکسی",
+  "proxyPortLabel": "پورت پراکسی",
+  "copyFromSystemProxy": "کپی از پراکسی سیستم ویندوز",
+  "noSystemProxyConfigured": "ویندوز هیچ پراکسی سیستمی تنظیم‌شده‌ای ندارد",
+  "unparsableSystemProxy": "تنظیم پراکسی ویندوز قابل‌فهم نبود: {value}",
+  "proxyUsernameLabel": "نام‌کاربری پراکسی (اختیاری)",
+  "proxyPasswordLabel": "رمز پراکسی (اختیاری)",
+  "saveCredentials": "ذخیره‌ی اعتبارنامه‌ها",
+  "credentialsSaved": "اعتبارنامه‌ی پراکسی ذخیره شد",
+  "tunnelPathLabel": "مسیر hev-socks5-tunnel.exe",
+  "tunnelPathHelper": "اگر خالی بگذارید، کنار فایل اجرایی برنامه (یا در پوشه‌ی bin\\) جست‌وجو می‌شود. برای حالت تمام‌VPN لازم است؛ حالت پراکسی به آن نیازی ندارد.",
+  "aboutBody": "نسخه آزمایشی ویندوز SABI-FOX از سرویس موزیلا استفاده می‌کند. سهمیه به حساب شما بستگی دارد. حالت تونل مسیرها و DNS را تغییر می‌دهد و به دسترسی مدیر نیاز دارد. ترافیک IPv6 محافظت نمی‌شود.",
+  "aboutSource": "سورس: github.com/M-RTZ1/SABI-FOX",
+  "copySourceUrl": "کپی آدرس سورس پروژه",
+  "sourceUrlCopied": "آدرس سورس کپی شد",
+  "logsTitle": "گزارش‌ها",
+  "logsShowOldestFirst": "نمایش قدیمی‌ترها ابتدا",
+  "logsShowNewestFirst": "نمایش تازه‌ترها ابتدا",
+  "logsCopyAll": "کپی همه",
+  "logsExportToFile": "خروجی فایل",
+  "logsClear": "پاک کردن",
+  "logsEmpty": "هنوز هیچ گزارشی ثبت نشده است.",
+  "logsCopiedToClipboard": "گزارش‌ها در کلیپ‌بورد کپی شد",
+  "logsExported": "گزارش در {path} ذخیره شد",
+  "logsExportFailed": "خطا در خروجی گرفتن: {error}",
+  "aboutVersion": "نسخه {version}",
+  "@aboutVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "updateCheckAction": "بررسی به‌روزرسان",
+  "updateChecking": "در حال بررسی GitHub…",
+  "updateUpToDate": "جدیدترین نشره را دارید ({version})",
+  "@updateUpToDate": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "updateNonePublished": "هنوز هیچ نشره‌ای در GitHub منتشر نشده است",
+  "updateFailed": "بررسی به‌روزرسان ناموفق بود: {error}",
+  "@updateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "updateAvailableTitle": "SABI-FOX {latest} دسترس است",
+  "@updateAvailableTitle": {
+    "placeholders": {
+      "latest": {
+        "type": "String"
+      }
+    }
+  },
+  "updateAvailableBody": "اکنون نسخه {current} را دارید. برای گرفتن نسخه‌ی جدید، release آن را در GitHub باز کنید.",
+  "@updateAvailableBody": {
+    "placeholders": {
+      "current": {
+        "type": "String"
+      }
+    }
+  },
+  "updateActionDownload": "دریافت {asset}",
+  "@updateActionDownload": {
+    "placeholders": {
+      "asset": {
+        "type": "String"
+      }
+    }
+  },
+  "updateActionOpenRelease": "باز کردن صفحه release",
+  "updateActionNotNow": "بعداً"
+}
