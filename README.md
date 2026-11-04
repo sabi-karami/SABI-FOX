@@ -41,6 +41,13 @@
 > Access, quota and availability are controlled by Mozilla. SABI-FOX connects only to
 > official endpoints and respects account quotas.
 
+## 🪟 Windows
+
+SABI-FOX also runs on **Windows 10/11 (64-bit)** — same app, same features, plus a tray icon,
+start with Windows, system-proxy mode, per-program split tunneling and a Persian interface.
+Download `SABI-FOX-Windows-Setup-x64.exe` (or the portable zip) from
+**[Releases](https://github.com/sabi-karami/SABI-FOX/releases/latest)**. Details: [windows/README.md](windows/README.md).
+
 ## 🔄 Automatic updates
 
 Settings → **Install updates automatically** (on by default). The first time, Android asks you to
