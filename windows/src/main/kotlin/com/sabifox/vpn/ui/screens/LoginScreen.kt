@@ -1,0 +1,121 @@
+package com.sabifox.vpn.ui.screens
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import com.sabifox.vpn.ui.components.SabiMark
+import com.sabifox.vpn.ui.components.sabiAuroraBrush
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import org.jetbrains.compose.resources.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sabifox.vpn.resources.*
+import com.sabifox.vpn.resources.Res
+import com.sabifox.vpn.data.FxaAuthRepository
+import com.sabifox.vpn.ui.LoginViewModel
+
+@Composable
+fun LoginScreen(authRepository: FxaAuthRepository, onSignedIn: () -> Unit) {
+    val model: LoginViewModel =
+        androidx.lifecycle.viewmodel.compose.viewModel(
+            factory = remember(authRepository) { LoginViewModel.factory(authRepository) }
+        )
+    val uiState by model.uiState.collectAsStateWithLifecycle()
+    val browserStartUrl = uiState.browserStartUrl
+    val completingBrowserLogin = uiState.isLoading
+    val errorMessage = uiState.errorMessage
+    val storageError by authRepository.storageError.collectAsStateWithLifecycle()
+    androidx.compose.runtime.LaunchedEffect(uiState.signedIn) { if (uiState.signedIn) onSignedIn() }
+
+    if (browserStartUrl != null) {
+        BrowserLoginScreen(
+            startUrl = browserStartUrl,
+            busy = completingBrowserLogin,
+            authRepository = authRepository,
+            errorMessage = errorMessage,
+            onTokensCaptured = model::completeBrowserLoginWithTokens,
+            onSessionCaptured = model::completeBrowserLogin,
+            onCanceled = model::cancelVerification,
+        )
+        return
+    }
+
+    Box(
+        modifier = Modifier.fillMaxSize().background(sabiAuroraBrush()).statusBarsPadding().navigationBarsPadding().imePadding(),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            modifier =
+                Modifier.widthIn(max = 520.dp)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+        ) {
+            SabiMark(size = 96.dp)
+            Spacer(Modifier.height(20.dp))
+            Text(
+                stringResource(Res.string.login_title),
+                style = MaterialTheme.typography.headlineMedium,
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                stringResource(Res.string.login_desc),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            storageError?.let {
+                Spacer(Modifier.height(12.dp))
+                Text(it, color = MaterialTheme.colorScheme.error)
+            }
+            Spacer(Modifier.height(24.dp))
+
+            Button(
+                onClick = model::startBrowserLogin,
+                enabled = !completingBrowserLogin,
+                shape = RoundedCornerShape(18.dp),
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+            ) {
+                Text(stringResource(Res.string.login_btn_sign_in))
+            }
+            Text(
+                stringResource(Res.string.login_help),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 6.dp),
+            )
+
+            errorMessage?.let {
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.error,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                )
+            }
+        }
+    }
+}

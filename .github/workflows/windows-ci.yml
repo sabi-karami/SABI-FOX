@@ -1,0 +1,178 @@
+name: SABI-FOX Windows CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, windows-app]
+    tags: ["v*.*.*"]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+env:
+  # Same MASQUE sing-box fork the Android app ships as libbox (v1.15.0-foxy-masque.2).
+  CORE_REPOSITORY: Vauth/sing-box
+  CORE_COMMIT: 05b17d5d0c0a131a78d7851304692da79aa8eccf
+  CORE_VERSION: 1.15.0-foxy-masque.2
+  CORE_TAGS: with_quic,with_utls,with_clash_api,with_wireguard,badlinkname,tfogo_checklinkname0
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Version
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "APP_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+          else
+            v=$(grep -oP 'versionName = "\K[0-9.]+' app/build.gradle.kts)
+            echo "APP_VERSION=$v" >> "$GITHUB_ENV"
+          fi
+
+      # ---- core engine -------------------------------------------------------------------
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ env.CORE_REPOSITORY }}
+          ref: ${{ env.CORE_COMMIT }}
+          path: core-src
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: core-src/go.mod
+          cache-dependency-path: core-src/go.sum
+      - name: Build sabifox-core.exe
+        working-directory: core-src
+        env:
+          GOOS: windows
+          GOARCH: amd64
+          CGO_ENABLED: "0"
+        run: |
+          set -euo pipefail
+          mkdir -p cmd/sabifox-core
+          cp ../windows/core/main.go cmd/sabifox-core/main.go
+          go build -v -trimpath -tags "$CORE_TAGS" \
+            -ldflags "-X github.com/sagernet/sing-box/constant.Version=$CORE_VERSION -X runtime.godebugDefault=multipathtcp=0,tlssha1=1 -checklinkname=0 -s -w -buildid=" \
+            -o ../windows/native/windows/sabifox-core.exe ./cmd/sabifox-core
+      - name: Smoke-test core
+        run: |
+          set -euo pipefail
+          core=windows/native/windows/sabifox-core.exe
+          "$core" version
+          echo '{"log":{"level":"warn"},"outbounds":[{"type":"direct","tag":"direct-out"}]}' | "$core" check
+          if echo '{"outbounds":[{"type":"no-such-type"}]}' | "$core" check; then
+            echo "check accepted an invalid config" >&2; exit 1
+          fi
+
+      # ---- sign-in window (WebView2) ----------------------------------------------------
+      - name: Build sign-in window
+        run: |
+          set -euo pipefail
+          dotnet publish windows/signin/SabiFoxSignIn.csproj -c Release -o windows/native/windows/signin --nologo
+          test -f windows/native/windows/signin/SabiFoxSignIn.exe
+          test -f windows/native/windows/signin/WebView2Loader.dll
+          rm -f windows/native/windows/signin/*.pdb
+
+      # ---- desktop app --------------------------------------------------------------------
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.14.3
+      - name: Test and package app image
+        run: gradle -p windows test createDistributable -PappVersion="$APP_VERSION" --no-daemon --console=plain --stacktrace
+
+      - name: Portable zip
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $app = "windows/build/compose/binaries/main/app/SABI-FOX"
+          if (!(Test-Path "$app/SABI-FOX.exe")) { throw "app image missing" }
+          New-Item -ItemType Directory -Force dist | Out-Null
+          $stage = "dist/portable/SABI-FOX"
+          New-Item -ItemType Directory -Force $stage | Out-Null
+          Copy-Item -Recurse "$app/*" $stage
+          Set-Content -Encoding ascii "$stage/portable.txt" "SABI-FOX portable: settings are kept in the data folder next to SABI-FOX.exe."
+          Compress-Archive -Path "dist/portable/SABI-FOX" -DestinationPath "dist/SABI-FOX-Windows-Portable-x64.zip" -CompressionLevel Optimal
+
+      - name: Installer
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          try {
+            Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/jrsoftware/issrc/main/Files/Languages/Unofficial/Persian.isl" -OutFile windows/packaging/Persian.isl
+          } catch { Write-Warning "Persian installer language unavailable: $_" }
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (!(Test-Path $iscc)) { choco install innosetup -y --no-progress; }
+          & $iscc /Qp "/DAppVersion=$env:APP_VERSION" "/DSourceDir=$PWD\windows\build\compose\binaries\main\app\SABI-FOX" "/DOutputDir=$PWD\dist" windows\packaging\sabifox.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed" }
+
+      - name: Checksums
+        working-directory: dist
+        run: |
+          set -euo pipefail
+          sha256sum SABI-FOX-Windows-Setup-x64.exe SABI-FOX-Windows-Portable-x64.zip > SHA256SUMS-windows.txt
+          cat SHA256SUMS-windows.txt
+
+      - name: Sign checksums
+        if: startsWith(github.ref, 'refs/tags/v')
+        working-directory: dist
+        env:
+          WINDOWS_UPDATE_SIGNING_KEY: ${{ secrets.WINDOWS_UPDATE_SIGNING_KEY }}
+        run: |
+          set -euo pipefail
+          : "${WINDOWS_UPDATE_SIGNING_KEY:?Missing update signing key}"
+          umask 077
+          printf '%s\n' "$WINDOWS_UPDATE_SIGNING_KEY" > "$RUNNER_TEMP/update-key.pem"
+          openssl pkeyutl -sign -rawin -inkey "$RUNNER_TEMP/update-key.pem" -in SHA256SUMS-windows.txt -out SHA256SUMS-windows.txt.sig
+          openssl pkey -in "$RUNNER_TEMP/update-key.pem" -pubout -out "$RUNNER_TEMP/update-pub.pem"
+          openssl pkeyutl -verify -rawin -pubin -inkey "$RUNNER_TEMP/update-pub.pem" -in SHA256SUMS-windows.txt -sigfile SHA256SUMS-windows.txt.sig
+          rm -f "$RUNNER_TEMP/update-key.pem"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sabifox-windows
+          path: |
+            dist/SABI-FOX-Windows-Setup-x64.exe
+            dist/SABI-FOX-Windows-Portable-x64.zip
+            dist/SHA256SUMS-windows.txt
+            dist/SHA256SUMS-windows.txt.sig
+          if-no-files-found: error
+
+      - name: Upload diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build-reports
+          path: windows/build/reports
+          if-no-files-found: ignore
+
+      - name: Publish to the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/SABI-FOX-Windows-Setup-x64.exe
+            dist/SABI-FOX-Windows-Portable-x64.zip
+            dist/SHA256SUMS-windows.txt
+            dist/SHA256SUMS-windows.txt.sig
+          fail_on_unmatched_files: true
+          name: SABI-FOX ${{ github.ref_name }}
