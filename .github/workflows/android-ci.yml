@@ -44,9 +44,10 @@ jobs:
           }
       - run: flutter --version
       - run: flutter pub get
+      - run: flutter gen-l10n
       - run: flutter analyze lib
       - name: Run available upstream tests
-        run: flutter test test/settings_mode_test.dart test/update_checker_test.dart test/h2_connection_window_test.dart test/browser_auth_test.dart
+        run: flutter test test/settings_mode_test.dart test/update_checker_test.dart test/h2_connection_window_test.dart test/browser_auth_test.dart test/sabi_ui_test.dart
       - run: flutter build windows --release
       - name: Package proxy-only unsigned preview with notices
         shell: pwsh
@@ -63,12 +64,12 @@ jobs:
           Copy-Item assets/fonts/OFL.txt "$release/FONTS-LICENSE.txt"
           Copy-Item assets/flags/LICENSE "$release/FLAGS-LICENSE.txt"
           Copy-Item pubspec.lock "$release/BUILD-PUBSPEC-LOCK.txt"
-          Compress-Archive -Path "$release/*" -DestinationPath "$env:RUNNER_TEMP/SABI-FOX-Windows-BROWSER-AUTH-PREVIEW.zip"
-          (Get-FileHash "$env:RUNNER_TEMP/SABI-FOX-Windows-BROWSER-AUTH-PREVIEW.zip" -Algorithm SHA256).Hash.ToLower() | Out-File "$env:RUNNER_TEMP/SHA256.txt" -Encoding ascii
+          Compress-Archive -Path "$release/*" -DestinationPath "$env:RUNNER_TEMP/SABI-FOX-Windows-NEW-UI-PREVIEW.zip"
+          (Get-FileHash "$env:RUNNER_TEMP/SABI-FOX-Windows-NEW-UI-PREVIEW.zip" -Algorithm SHA256).Hash.ToLower() | Out-File "$env:RUNNER_TEMP/SHA256.txt" -Encoding ascii
       - uses: actions/upload-artifact@v4
         with:
-          name: windows-browser-auth-unsigned-preview
+          name: windows-new-ui-unsigned-preview
           path: |
-            ${{ runner.temp }}/SABI-FOX-Windows-BROWSER-AUTH-PREVIEW.zip
+            ${{ runner.temp }}/SABI-FOX-Windows-NEW-UI-PREVIEW.zip
             ${{ runner.temp }}/SHA256.txt
           if-no-files-found: error

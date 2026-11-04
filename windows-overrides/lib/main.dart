@@ -9,6 +9,7 @@ import 'data/server_list_store.dart';
 import 'data/settings_store.dart';
 import 'l10n/generated/app_localizations.dart';
 import 'ui/root_screen.dart';
+import 'ui/sabi_theme.dart';
 import 'vpn/vpn_controller.dart';
 
 /// Phone-sized window: 9:20 aspect ratio, like the Android app's screen.
@@ -91,23 +92,19 @@ class _FoxyVpnAppState extends State<FoxyVpnApp> with WindowListener {
           locale: locale,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: const Color(0xFF00A884),
-            ),
-            useMaterial3: true,
-            // Vazirmatn carries Persian, Arabic and Latin glyph sets, so the
-            // same family works in both locales.
-            fontFamily: 'Vazirmatn',
-          ),
-          darkTheme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: const Color(0xFF00A884),
-              brightness: Brightness.dark,
-            ),
-            useMaterial3: true,
-            fontFamily: 'Vazirmatn',
-          ),
+          theme: buildSabiTheme(Brightness.light),
+          darkTheme: buildSabiTheme(Brightness.dark),
+          builder: (context, child) {
+            final brightness = Theme.of(context).brightness;
+            WidgetsBinding.instance.addPostFrameCallback((_) async {
+              try {
+                await windowManager.setBrightness(brightness);
+              } catch (_) {
+                // Title-bar tinting is cosmetic; ignore failures.
+              }
+            });
+            return child ?? const SizedBox.shrink();
+          },
           home: const RootScreen(),
         );
       },

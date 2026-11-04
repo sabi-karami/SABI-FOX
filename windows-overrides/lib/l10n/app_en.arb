@@ -312,8 +312,8 @@
   "credentialsSaved": "Proxy credentials saved",
   "tunnelPathLabel": "hev-socks5-tunnel.exe path",
   "tunnelPathHelper": "Leave empty to look next to the app executable (or in bin\\). Required for full-VPN mode; proxy-only mode does not need it.",
-  "aboutBody": "SABI-FOX Windows preview uses Mozilla services. Quota depends on your account. Full tunnel mode changes routes and DNS and requires administrator access. IPv6 is not protected.",
-  "aboutSource": "Source: github.com/M-RTZ1/SABI-FOX",
+  "aboutBody": "SABI-FOX Windows preview uses Mozilla services through a local SOCKS5 proxy only. It does not route system traffic, has no kill switch, and is not a complete VPN. Quota depends on your account.",
+  "aboutSource": "Source: github.com/sabi-karami/SABI-FOX",
   "copySourceUrl": "Copy the project source URL",
   "sourceUrlCopied": "Source URL copied",
   "logsTitle": "Logs",
@@ -392,5 +392,40 @@
     }
   },
   "updateActionOpenRelease": "Open the release page",
-  "updateActionNotNow": "Not now"
+  "updateActionNotNow": "Not now",
+  "previewBadge": "Windows preview",
+  "homeConnectAction": "Connect",
+  "homeDisconnectAction": "Disconnect",
+  "statusConnectedShort": "Proxy active",
+  "homeAddressCopied": "Proxy address copied",
+  "homeCopyAddress": "Copy address",
+  "homeProxyCardTitle": "Local proxy",
+  "homeProxyCardBody": "Only apps you set to use this SOCKS5 address go through it. Other traffic is not routed.",
+  "homeQuotaLabel": "Data quota",
+  "loginAddressLabel": "Final Mozilla address",
+  "loginErrorBrowser": "Could not open the browser. Check your default browser.",
+  "loginErrorInvalidAddress": "That address is not the final sign-in address. Copy it again from the browser.",
+  "loginErrorFailed": "Sign-in could not be completed. Please start again.",
+  "loginErrorClipboardEmpty": "The clipboard is empty.",
+  "loginFinish": "Finish sign-in",
+  "loginOpenBrowser": "Open Mozilla sign-in",
+  "loginStartAgain": "Start again",
+  "loginPaste": "Paste",
+  "loginStep1Title": "Sign in on Mozilla’s website",
+  "loginStep1Body": "Your browser opens Mozilla’s official sign-in page.",
+  "loginStep2Title": "Copy the final address",
+  "loginStep2Body": "After signing in, copy the full address from the browser bar and paste it here.",
+  "loginStep3Title": "Finish",
+  "loginStep3Body": "The app finishes sign-in with that address.",
+  "loginPrivacyNote": "Never type your Mozilla password or email code into this app, and keep the final address private — do not share it with anyone.",
+  "loginFooter": "Experimental • local proxy only • not a complete VPN",
+  "aboutCredits": "Based on FoxyVPN by M-RTZ1 (MIT license). Unofficial; not affiliated with or endorsed by Mozilla.",
+  "themeToggleTooltip": "Theme: {mode}",
+  "@themeToggleTooltip": {
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      }
+    }
+  }
 }

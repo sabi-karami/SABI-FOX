@@ -22,3 +22,13 @@ Mozilla. Original Firefox/FoxyVPN names in notices identify their owners.
 
 Extract the entire zip, then run SABI-FOX.exe. The build has not been tested on
 a physical Windows machine.
+
+
+## UI redesign preview (0.2.0)
+
+The Windows UI was restyled to match the Android "Nocturne Aurora" design
+(theme, home orb, guided browser sign-in, settings cards, new app icon).
+Functionality is unchanged: still local SOCKS5 proxy only (127.0.0.1:21080),
+no system-wide tunnel, no kill switch, unsigned and experimental. Sign-in has
+had only limited manual testing; the new UI has not been tested on a physical
+Windows device.

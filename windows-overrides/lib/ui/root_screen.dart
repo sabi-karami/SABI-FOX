@@ -5,6 +5,7 @@ import '../data/fxa_auth_repository.dart';
 import '../data/token_store.dart';
 import 'home_shell.dart';
 import 'login_screen.dart';
+import 'sabi_brand.dart';
 
 /// Restores a stored Firefox Accounts session on startup and routes to
 /// either the sign-in screen or the main shell.
@@ -73,28 +74,36 @@ class _Splash extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ClipOval(
-              child: Image.asset(
-                'assets/images/foxyvpn_logo.jpg',
-                width: 96,
-                height: 96,
-                fit: BoxFit.cover,
+      backgroundColor: Colors.transparent,
+      body: SabiBackdrop(
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SabiGlowMark(size: 96),
+              const SizedBox(height: 18),
+              const FittedBox(
+                fit: BoxFit.scaleDown,
+                child: SabiWordmark(fontSize: 28, showMark: false),
               ),
-            ),
-            const SizedBox(height: 16),
-            Text('SABI-FOX',
-                style: Theme.of(context)
-                    .textTheme
-                    .headlineSmall
-                    ?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 24),
-            const CircularProgressIndicator(),
-          ],
+              const SizedBox(height: 8),
+              Text(
+                'WINDOWS · PREVIEW',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  letterSpacing: 2,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 28),
+              const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(strokeWidth: 2.4),
+              ),
+            ],
+          ),
         ),
       ),
     );

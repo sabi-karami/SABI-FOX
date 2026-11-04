@@ -7,6 +7,7 @@ import '../data/split_tunnel_rules.dart';
 import '../data/update_checker.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../vpn/system_proxy_manager.dart';
+import 'sabi_brand.dart';
 
 /// All mirrored Android settings, laid out for the phone-sized window.
 class SettingsScreen extends StatefulWidget {
@@ -326,7 +327,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   labelText: l10n.splitTunnelPatternLabel,
                   helperText: l10n.splitTunnelPatternHelper,
                   isDense: true,
-                  border: const OutlineInputBorder(),
                 ),
               ),
             ),
@@ -640,8 +640,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 _SectionTitle(l10n.sectionAbout),
                 _updateTile(l10n),
-                Card(
-                  margin: EdgeInsets.zero,
+                SabiCard(
+                  padding: EdgeInsets.zero,
                   child: Padding(
                     padding: const EdgeInsets.all(12),
                     child: Column(
@@ -650,14 +650,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            ClipOval(
-                              child: Image.asset(
-                                'assets/images/foxyvpn_logo.jpg',
-                                width: 44,
-                                height: 44,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
+                            const SabiMark(size: 44),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
@@ -666,6 +659,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               ),
                             ),
                           ],
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            l10n.aboutCredits,
+                            style: const TextStyle(fontSize: 12),
+                          ),
                         ),
                         Padding(
                           padding: const EdgeInsets.only(top: 8),
@@ -743,7 +743,7 @@ class _SectionTitle extends StatelessWidget {
     return Padding(
       padding: const EdgeInsetsDirectional.fromSTEB(4, 18, 4, 6),
       child: Text(
-        title.toUpperCase(),
+        title,
         style: Theme.of(context).textTheme.labelMedium?.copyWith(
           color: scheme.primary,
           letterSpacing: letterSpacing,
@@ -832,7 +832,6 @@ class _TextFieldTileState extends State<_TextFieldTile> {
               labelText: widget.label,
               helperText: widget.helper,
               isDense: true,
-              border: const OutlineInputBorder(),
             ),
           ),
           if (widget.presets.isNotEmpty)

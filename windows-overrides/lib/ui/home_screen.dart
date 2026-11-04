@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart' hide ConnectionState;
+import 'package:flutter/services.dart';
 
 import '../core/app_logger.dart';
 import '../core/app_version.dart';
@@ -10,12 +11,18 @@ import '../data/token_store.dart';
 import '../data/update_checker.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../vpn/vpn_controller.dart';
+import 'sabi_brand.dart';
+import 'sabi_theme.dart';
 
-/// Main screen: power button, connection status, speed and quota readouts.
+/// Main screen, laid out like the Android app: wordmark bar, connect orb,
+/// status, live readouts, the local proxy address and the chosen location.
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({required this.onSignedOut, super.key});
+  const HomeScreen({required this.onSignedOut, this.onOpenServers, super.key});
 
   final VoidCallback onSignedOut;
+
+  /// Switches the shell to the Servers tab.
+  final VoidCallback? onOpenServers;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -65,6 +72,38 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  void _cycleTheme() {
+    final settings = SettingsStore.instance;
+    settings.themeMode = switch (settings.themeMode) {
+      ThemeModeSetting.system => ThemeModeSetting.light,
+      ThemeModeSetting.light => ThemeModeSetting.dark,
+      ThemeModeSetting.dark => ThemeModeSetting.system,
+    };
+  }
+
+  /// The address a browser or app should use for the local proxy.
+  String _proxyEndpoint() {
+    final settings = SettingsStore.instance;
+    var host = settings.socksBindAddress.trim();
+    // A wildcard bind is reachable locally on the loopback address.
+    if (host.isEmpty || host == '0.0.0.0') host = '127.0.0.1';
+    if (host == '::') host = '::1';
+    if (host.contains(':')) host = '[$host]';
+    return '$host:${settings.socksPort}';
+  }
+
+  Future<void> _copyEndpoint(String endpoint) async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    await Clipboard.setData(ClipboardData(text: endpoint));
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(l10n.homeAddressCopied),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -75,36 +114,64 @@ class _HomeScreenState extends State<HomeScreen> {
         UpdateChecker.instance,
       ]),
       builder: (context, _) {
-        final scheme = Theme.of(context).colorScheme;
+        final theme = Theme.of(context);
+        final scheme = theme.colorScheme;
+        final status = SabiStatusColors.of(context);
         final l10n = AppLocalizations.of(context);
         final state = _vpn.state;
+        final connected = state == ConnectionState.connected;
+        final connecting = state == ConnectionState.connecting;
         final selected = ProxyStateStore.instance.load();
+        final tone = connected
+            ? status.connected
+            : connecting
+            ? status.connecting
+            : scheme.outline;
+        final lastError = _vpn.lastError;
+        final release = _update.latest;
+        final endpoint = _proxyEndpoint();
 
         return Scaffold(
-          appBar: AppBar(
-            title: const Text('SABI-FOX'),
-            centerTitle: true,
-            actions: [
-              IconButton(
-                tooltip: l10n.actionSignOut,
-                icon: const Icon(Icons.logout),
-                onPressed: _signOut,
-              ),
-            ],
-          ),
           body: SafeArea(
             child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              padding: const EdgeInsets.fromLTRB(18, 10, 18, 24),
               children: [
+                _TopBar(
+                  themeMode: SettingsStore.instance.themeMode,
+                  onToggleTheme: _cycleTheme,
+                  onSignOut: _signOut,
+                ),
+                const SizedBox(height: 14),
+                Center(
+                  child: SabiPill(
+                    icon: Icons.science_outlined,
+                    label: l10n.previewBadge,
+                    color: scheme.tertiary,
+                  ),
+                ),
                 const SizedBox(height: 16),
                 Center(
-                  child: _PowerButton(state: state, onTap: _togglePower),
+                  child: SabiConnectOrb(
+                    connected: connected,
+                    connecting: connecting,
+                    ringColor: tone,
+                    label: connected || connecting
+                        ? l10n.homeDisconnectAction
+                        : l10n.homeConnectAction,
+                    onPressed: _togglePower,
+                  ),
                 ),
-                const SizedBox(height: 20),
-                Text(
-                  _statusText(l10n),
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.titleMedium,
+                const SizedBox(height: 16),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 250),
+                  child: Text(
+                    _headline(l10n),
+                    key: ValueKey<String>(_headline(l10n)),
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      color: connected ? status.connected : scheme.onSurface,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 6),
                 Text(
@@ -117,78 +184,37 @@ class _HomeScreenState extends State<HomeScreen> {
                     ConnectionState.disconnected => l10n.homeTrafficUnprotected,
                   },
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  style: theme.textTheme.bodyMedium?.copyWith(
                     color: scheme.onSurfaceVariant,
                   ),
                 ),
-                if (_vpn.lastError != null) ...[
+                if (lastError != null) ...[
                   const SizedBox(height: 14),
-                  Card(
-                    color: scheme.errorContainer,
-                    margin: EdgeInsets.zero,
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(
-                            Icons.error_outline,
-                            size: 20,
-                            color: scheme.onErrorContainer,
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              _vpn.lastError!,
-                              style: TextStyle(
-                                color: scheme.onErrorContainer,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                  _NoticeCard(
+                    icon: Icons.error_outline_rounded,
+                    color: scheme.error,
+                    message: lastError,
                   ),
                 ],
-                if (_update.updateAvailable) ...[
+                if (_update.updateAvailable && release != null) ...[
                   const SizedBox(height: 14),
                   _UpdateCard(
-                    release: _update.latest!,
+                    release: release,
                     onDownload: _update.openDownload,
                     onDismiss: _update.dismissLatest,
                   ),
                 ],
                 const SizedBox(height: 20),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _StatCard(
-                        icon: Icons.arrow_downward,
-                        label: l10n.statDownload,
-                        value: state == ConnectionState.connected
-                            ? formatBytesPerSecond(_vpn.downloadBytesPerSecond)
-                            : '—',
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _StatCard(
-                        icon: Icons.arrow_upward,
-                        label: l10n.statUpload,
-                        value: state == ConnectionState.connected
-                            ? formatBytesPerSecond(_vpn.uploadBytesPerSecond)
-                            : '—',
-                      ),
-                    ),
-                  ],
+                _TelemetryCard(vpn: _vpn, connected: connected),
+                const SizedBox(height: 12),
+                _ProxyCard(
+                  endpoint: endpoint,
+                  active: connected,
+                  onCopy: () => _copyEndpoint(endpoint),
                 ),
                 const SizedBox(height: 12),
-                _QuotaCard(vpn: _vpn),
-                const SizedBox(height: 12),
-                _ServerCard(selected: selected),
+                _ServerCard(selected: selected, onTap: widget.onOpenServers),
                 _SplitTunnelCard(vpn: _vpn),
-                const SizedBox(height: 24),
               ],
             ),
           ),
@@ -197,28 +223,27 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Short status line under the orb; details go in the subtitle.
+  String _headline(AppLocalizations l10n) {
+    return switch (_vpn.statusKind) {
+      VpnStatusKind.disconnected => l10n.statusDisconnected,
+      VpnStatusKind.connecting => l10n.statusConnecting,
+      VpnStatusKind.waitingForNetwork => l10n.statusWaitingForNetwork,
+      VpnStatusKind.reconnecting => l10n.statusReconnecting,
+      VpnStatusKind.tunnelActive ||
+      VpnStatusKind.systemProxyActive ||
+      VpnStatusKind.proxyActive => l10n.statusConnectedShort,
+    };
+  }
+
   String _connectedSubtitle(ProxyCandidate? selected, AppLocalizations l10n) {
     return switch (_vpn.statusKind) {
       // Tunnel mode shows the exit country/city.
       VpnStatusKind.tunnelActive => _locationLabel(selected, l10n),
       // Proxy modes show the local address.
       VpnStatusKind.systemProxyActive ||
-      VpnStatusKind.proxyActive =>
-        l10n.homeLocalProxy(_vpn.statusDetail),
+      VpnStatusKind.proxyActive => l10n.homeLocalProxy(_vpn.statusDetail),
       _ => '',
-    };
-  }
-
-  String _statusText(AppLocalizations l10n) {
-    return switch (_vpn.statusKind) {
-      VpnStatusKind.disconnected => l10n.statusDisconnected,
-      VpnStatusKind.connecting => l10n.statusConnecting,
-      VpnStatusKind.waitingForNetwork => l10n.statusWaitingForNetwork,
-      VpnStatusKind.reconnecting => l10n.statusReconnecting,
-      VpnStatusKind.tunnelActive => l10n.statusTunnelActive(_vpn.statusDetail),
-      VpnStatusKind.systemProxyActive =>
-        l10n.statusSystemProxyActive(_vpn.statusDetail),
-      VpnStatusKind.proxyActive => l10n.statusProxyActive(_vpn.statusDetail),
     };
   }
 
@@ -232,57 +257,108 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _PowerButton extends StatelessWidget {
-  const _PowerButton({required this.state, required this.onTap});
+class _TopBar extends StatelessWidget {
+  const _TopBar({
+    required this.themeMode,
+    required this.onToggleTheme,
+    required this.onSignOut,
+  });
 
-  final ConnectionState state;
-  final VoidCallback onTap;
+  final ThemeModeSetting themeMode;
+  final VoidCallback onToggleTheme;
+  final VoidCallback onSignOut;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final (IconData icon, String label) = switch (themeMode) {
+      ThemeModeSetting.system => (Icons.brightness_auto_rounded, l10n.themeAuto),
+      ThemeModeSetting.light => (Icons.light_mode_rounded, l10n.themeLight),
+      ThemeModeSetting.dark => (Icons.dark_mode_rounded, l10n.themeDark),
+    };
+    return Row(
+      children: [
+        const Flexible(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: AlignmentDirectional.centerStart,
+            child: SabiWordmark(),
+          ),
+        ),
+        const Spacer(),
+        _RoundIconButton(
+          icon: icon,
+          tooltip: l10n.themeToggleTooltip(label),
+          onPressed: onToggleTheme,
+        ),
+        const SizedBox(width: 8),
+        _RoundIconButton(
+          icon: Icons.logout_rounded,
+          tooltip: l10n.actionSignOut,
+          onPressed: onSignOut,
+        ),
+      ],
+    );
+  }
+}
+
+class _RoundIconButton extends StatelessWidget {
+  const _RoundIconButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final connected = state == ConnectionState.connected;
-    final connecting = state == ConnectionState.connecting;
-    final background = connected
-        ? scheme.primary
-        : scheme.surfaceContainerHighest;
-    final foreground = connected ? scheme.onPrimary : scheme.onSurfaceVariant;
+    return IconButton(
+      tooltip: tooltip,
+      onPressed: onPressed,
+      style: IconButton.styleFrom(
+        foregroundColor: scheme.onSurfaceVariant,
+        backgroundColor: scheme.surfaceContainerHigh.withValues(alpha: 0.7),
+        side: BorderSide(color: scheme.outlineVariant),
+      ),
+      icon: Icon(icon, size: 20),
+    );
+  }
+}
 
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        width: 168,
-        height: 168,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: background,
-          boxShadow: connected
-              ? [
-                  BoxShadow(
-                    color: scheme.primary.withValues(alpha: 0.4),
-                    blurRadius: 32,
-                    spreadRadius: 2,
-                  ),
-                ]
-              : null,
-        ),
-        child: Center(
-          child: connecting
-              ? SizedBox(
-                  width: 64,
-                  height: 64,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 5,
-                    color: foreground,
-                  ),
-                )
-              : Icon(
-                  Icons.power_settings_new_rounded,
-                  size: 64,
-                  color: foreground,
-                ),
-        ),
+class _NoticeCard extends StatelessWidget {
+  const _NoticeCard({
+    required this.icon,
+    required this.color,
+    required this.message,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return SabiCard(
+      accent: color,
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: color),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -302,228 +378,421 @@ class _UpdateCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final l10n = AppLocalizations.of(context);
     final asset = release.assetName;
     final changelog = release.changelog;
 
-    return Card(
-      color: scheme.secondaryContainer,
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(
-                  Icons.system_update_alt,
-                  size: 20,
-                  color: scheme.onSecondaryContainer,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    l10n.updateAvailableTitle(release.version),
-                    style: TextStyle(
-                      color: scheme.onSecondaryContainer,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              l10n.updateAvailableBody(AppVersion.full),
-              style: TextStyle(
-                fontSize: 12,
-                color: scheme.onSecondaryContainer,
+    return SabiCard(
+      accent: scheme.tertiary,
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              SabiIconBadge(
+                icon: Icons.system_update_alt_rounded,
+                color: scheme.tertiary,
+                size: 34,
               ),
-            ),
-            if (changelog.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(
-                changelog,
-                maxLines: 4,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: scheme.onSecondaryContainer,
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  l10n.updateAvailableTitle(release.version),
+                  style: theme.textTheme.titleSmall,
                 ),
               ),
             ],
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(
-                  onPressed: onDismiss,
-                  child: Text(l10n.updateActionNotNow),
-                ),
-                const SizedBox(width: 6),
-                FilledButton(
-                  onPressed: () => onDownload(),
-                  child: Text(
-                    asset == null
-                        ? l10n.updateActionOpenRelease
-                        : l10n.updateActionDownload(asset),
-                  ),
-                ),
-              ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            l10n.updateAvailableBody(AppVersion.full),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: scheme.onSurfaceVariant,
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _StatCard extends StatelessWidget {
-  const _StatCard({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-        child: Column(
-          children: [
-            Icon(icon, size: 20, color: scheme.primary),
+          ),
+          if (changelog.isNotEmpty) ...[
             const SizedBox(height: 6),
             Text(
-              value,
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-            ),
-            Text(
-              label,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+              changelog,
+              maxLines: 4,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
             ),
           ],
-        ),
+          const SizedBox(height: 4),
+          Wrap(
+            alignment: WrapAlignment.end,
+            spacing: 6,
+            children: [
+              TextButton(
+                onPressed: onDismiss,
+                child: Text(l10n.updateActionNotNow),
+              ),
+              TextButton(
+                onPressed: () => onDownload(),
+                child: Text(
+                  asset == null
+                      ? l10n.updateActionOpenRelease
+                      : l10n.updateActionDownload(asset),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 }
 
-class _QuotaCard extends StatelessWidget {
-  const _QuotaCard({required this.vpn});
+/// Download / upload rates and the account quota, in one card like the
+/// Android stats card.
+class _TelemetryCard extends StatelessWidget {
+  const _TelemetryCard({required this.vpn, required this.connected});
 
   final VpnController vpn;
+  final bool connected;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final l10n = AppLocalizations.of(context);
     final remaining = vpn.quotaRemainingBytes;
     final max = vpn.quotaMaxBytes;
 
-    Widget child;
+    final Widget quota;
     if (remaining == null) {
-      child = Row(
+      quota = Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.data_usage_outlined, size: 20, color: scheme.primary),
+          Icon(Icons.data_usage_rounded, size: 18, color: scheme.primary),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               l10n.quotaPending,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
             ),
           ),
         ],
       );
     } else {
-      final usedFraction = (max != null && max > 0)
-          ? (1 - remaining / max).clamp(0.0, 1.0)
-          : 0.0;
-      child = Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      final fraction = (max != null && max > 0)
+          ? (remaining / max).clamp(0.0, 1.0).toDouble()
+          : null;
+      quota = Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
-              Icon(Icons.data_usage_outlined, size: 20, color: scheme.primary),
+              Icon(Icons.data_usage_rounded, size: 18, color: scheme.primary),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  max != null
-                      ? l10n.quotaLeftOf(
-                          formatBytes(remaining),
-                          formatBytes(max),
-                        )
-                      : l10n.quotaLeft(formatBytes(remaining)),
-                  style: Theme.of(context).textTheme.bodyMedium,
+                  l10n.homeQuotaLabel,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: usedFraction,
-              minHeight: 8,
-              backgroundColor: scheme.surfaceContainerHighest,
-            ),
+          const SizedBox(height: 6),
+          Text(
+            max != null
+                ? l10n.quotaLeftOf(formatBytes(remaining), formatBytes(max))
+                : l10n.quotaLeft(formatBytes(remaining)),
+            style: theme.textTheme.titleSmall,
           ),
+          if (fraction != null) ...[
+            const SizedBox(height: 10),
+            _GradientBar(fraction: fraction),
+          ],
         ],
       );
     }
 
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(padding: const EdgeInsets.all(14), child: child),
+    return SabiCard(
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _Metric(
+                  icon: Icons.arrow_downward_rounded,
+                  color: scheme.primary,
+                  label: l10n.statDownload,
+                  value: connected
+                      ? formatBytesPerSecond(vpn.downloadBytesPerSecond)
+                      : '—',
+                ),
+              ),
+              Container(
+                width: 1,
+                height: 40,
+                margin: const EdgeInsets.symmetric(horizontal: 10),
+                color: scheme.outlineVariant,
+              ),
+              Expanded(
+                child: _Metric(
+                  icon: Icons.arrow_upward_rounded,
+                  color: scheme.tertiary,
+                  label: l10n.statUpload,
+                  value: connected
+                      ? formatBytesPerSecond(vpn.uploadBytesPerSecond)
+                      : '—',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          const Divider(),
+          const SizedBox(height: 14),
+          quota,
+        ],
+      ),
+    );
+  }
+}
+
+class _Metric extends StatelessWidget {
+  const _Metric({
+    required this.icon,
+    required this.color,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        SabiIconBadge(icon: icon, color: color, size: 34),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Remaining-quota bar, filled from the reading start like Android's.
+class _GradientBar extends StatelessWidget {
+  const _GradientBar({required this.fraction});
+
+  final double fraction;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Container(
+          height: 8,
+          alignment: AlignmentDirectional.centerStart,
+          decoration: BoxDecoration(
+            color: scheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Container(
+            width: constraints.maxWidth * fraction,
+            height: 8,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              gradient: LinearGradient(
+                colors: [scheme.primary, scheme.tertiary],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// The preview only runs a local proxy: show where it listens and say
+/// plainly that other Windows traffic is not routed.
+class _ProxyCard extends StatelessWidget {
+  const _ProxyCard({
+    required this.endpoint,
+    required this.active,
+    required this.onCopy,
+  });
+
+  final String endpoint;
+  final bool active;
+  final VoidCallback onCopy;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final status = SabiStatusColors.of(context);
+    final l10n = AppLocalizations.of(context);
+    final tone = active ? status.connected : scheme.onSurfaceVariant;
+    return SabiCard(
+      padding: const EdgeInsets.fromLTRB(14, 12, 8, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              SabiIconBadge(icon: Icons.lan_outlined, color: tone, size: 34),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.homeProxyCardTitle,
+                      style: theme.textTheme.titleSmall,
+                    ),
+                    Text(
+                      'SOCKS5 + HTTP',
+                      textDirection: TextDirection.ltr,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: l10n.homeCopyAddress,
+                onPressed: onCopy,
+                icon: const Icon(Icons.content_copy_rounded, size: 20),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsetsDirectional.only(end: 6),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: scheme.surfaceContainerLowest.withValues(alpha: 0.7),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: tone.withValues(alpha: 0.4)),
+              ),
+              child: SelectableText(
+                endpoint,
+                textAlign: TextAlign.center,
+                textDirection: TextDirection.ltr,
+                style: TextStyle(
+                  fontFamily: 'Consolas',
+                  fontFamilyFallback: const [sabiFontFamily],
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: active ? status.connected : scheme.onSurface,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsetsDirectional.only(end: 6),
+            child: Text(
+              l10n.homeProxyCardBody,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
 class _ServerCard extends StatelessWidget {
-  const _ServerCard({required this.selected});
+  const _ServerCard({required this.selected, required this.onTap});
 
   final ProxyCandidate? selected;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final l10n = AppLocalizations.of(context);
-    final country = selected == null
+    final candidate = selected;
+    final country = candidate == null
         ? l10n.serverCardRecommended
-        : (selected!.countryName.isNotEmpty
-              ? selected!.countryName
-              : selected!.countryCode);
-    final details = selected == null
+        : (candidate.countryName.isNotEmpty
+              ? candidate.countryName
+              : candidate.countryCode);
+    final details = candidate == null
         ? l10n.serverCardPickLocation
-        : '${selected!.cityCode.isNotEmpty ? '${selected!.cityCode} • ' : ''}${selected!.authority}';
+        : '${candidate.cityCode.isNotEmpty ? '${candidate.cityCode} • ' : ''}'
+              '${candidate.authority}';
 
-    return Card(
-      margin: EdgeInsets.zero,
-      child: ListTile(
-        leading: Icon(Icons.location_on_outlined, color: scheme.primary),
-        title: Text(country),
-        subtitle: Text(
-          details,
-          style: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-        ),
+    return SabiCard(
+      onTap: onTap,
+      padding: const EdgeInsetsDirectional.fromSTEB(14, 12, 10, 12),
+      child: Row(
+        children: [
+          SabiCountryBadge(countryCode: candidate?.countryCode),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  country,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleSmall,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  details,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (onTap != null)
+            Icon(Icons.chevron_right_rounded, color: scheme.onSurfaceVariant),
+        ],
       ),
     );
   }
@@ -540,22 +809,41 @@ class _SplitTunnelCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final settings = SettingsStore.instance;
     if (!settings.splitTunnelEnabled) return const SizedBox.shrink();
-    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final l10n = AppLocalizations.of(context);
-    return Card(
-      margin: const EdgeInsets.only(top: 12),
-      child: ListTile(
-        dense: true,
-        leading: Icon(Icons.alt_route, size: 20, color: scheme.primary),
-        title: Text(
-          l10n.homeSplitTunnelRules(settings.splitTunnelRules.length),
-          style: const TextStyle(fontSize: 13),
-        ),
-        subtitle: Text(
-          l10n.homeSplitTunnelBypassed(vpn.directFlowCount),
-          style: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: SabiCard(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          children: [
+            SabiIconBadge(
+              icon: Icons.alt_route_rounded,
+              color: scheme.tertiary,
+              size: 34,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.homeSplitTunnelRules(
+                      settings.splitTunnelRules.length,
+                    ),
+                    style: theme.textTheme.titleSmall,
+                  ),
+                  Text(
+                    l10n.homeSplitTunnelBypassed(vpn.directFlowCount),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
