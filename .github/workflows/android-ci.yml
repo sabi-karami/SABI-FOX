@@ -45,8 +45,8 @@ jobs:
       - run: flutter --version
       - run: flutter pub get
       - run: flutter analyze lib
-      - name: Run available upstream tests
-        run: flutter test test/settings_mode_test.dart test/update_checker_test.dart test/h2_connection_window_test.dart test/browser_auth_test.dart
+      - name: Run simulated route, DNS and existing tests
+        run: flutter test test/settings_mode_test.dart test/update_checker_test.dart test/h2_connection_window_test.dart test/browser_auth_test.dart test/route_manager_test.dart test/hev_config_test.dart test/system_proxy_manager_test.dart
       - run: flutter build windows --release
       - name: Package proxy-only unsigned preview with notices
         shell: pwsh
