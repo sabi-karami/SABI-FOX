@@ -658,11 +658,13 @@ class SabiFoxService : VpnService() {
                         try {
                             guardian.fetchProxyPass(GUARDIAN_ENDPOINT_DEFAULT, auth.accessToken)
                         } catch (quota: QuotaExceededError) {
-                            settingsStore.saveAccountQuota(
-                                false,
-                                quota.quotaRemaining,
-                                quota.quotaMax,
-                            )
+                            tokenStore.withCurrentSession(sessionEpoch) {
+                                settingsStore.saveAccountQuota(
+                                    false,
+                                    quota.quotaRemaining,
+                                    quota.quotaMax,
+                                )
+                            }
                             throw quota
                         } catch (rejected: TokenInvalidError) {
                             AppLogger.w(
@@ -694,11 +696,13 @@ class SabiFoxService : VpnService() {
                         }
                     val hasQuota = pass.quotaRemaining != null || pass.quotaMax != null
                     val isUnlimited = if (hasQuota) false else settingsStore.cachedIsUnlimited
-                    settingsStore.saveAccountQuota(
-                        isUnlimited,
-                        pass.quotaRemaining,
-                        pass.quotaMax,
-                    )
+                    tokenStore.withCurrentSession(sessionEpoch) {
+                        settingsStore.saveAccountQuota(
+                            isUnlimited,
+                            pass.quotaRemaining,
+                            pass.quotaMax,
+                        )
+                    }
                     return pass
                 }
 

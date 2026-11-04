@@ -154,12 +154,12 @@ class SettingsStore(context: Context) {
         val editor = prefs.edit().putBoolean(KEY_CACHED_IS_UNLIMITED, unlimited)
         if (remaining != null && remaining >= 0) {
             editor.putLong(KEY_CACHED_QUOTA_REMAINING, remaining)
-        } else if (unlimited) {
+        } else {
             editor.remove(KEY_CACHED_QUOTA_REMAINING)
         }
         if (maximum != null && maximum >= 0) {
             editor.putLong(KEY_CACHED_QUOTA_MAX, maximum)
-        } else if (unlimited) {
+        } else {
             editor.remove(KEY_CACHED_QUOTA_MAX)
         }
         editor.apply()
